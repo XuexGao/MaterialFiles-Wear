@@ -6,6 +6,7 @@
 package me.zhanghai.android.files.viewer.image
 
 import android.graphics.BitmapFactory
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isVisible
@@ -59,8 +60,12 @@ class ImageViewerAdapter(
         binding.progress.setOnClickListener(listener)
         binding.errorText.setOnClickListener(listener)
         binding.image.setOnPhotoTapListener { view, _, _ -> listener(view) }
-        binding.image.setOutsidePhotoTapListener { view -> listener(view) }
+        binding.image.attacher?.setOnOutsidePhotoTapListener { view -> listener(view) }
         binding.largeImage.setOnClickListener(listener)
+        // While the image is zoomed in, horizontal swipes pan it; pages are only switched once its
+        // edge has been reached.
+        binding.image.installPanInterceptor { binding.image.canScrollHorizontally(it) }
+        binding.largeImage.installPanInterceptor { binding.largeImage.canScrollHorizontally(it) }
         loadImage(binding, path)
     }
 
@@ -72,19 +77,33 @@ class ImageViewerAdapter(
         binding.largeImage.recycle()
     }
 
-    /**
-     * Returns whether the currently displayed image of this holder is zoomed in and can still pan
-     * itself by [direction] (-1 for left, 1 for right), so that paging should wait until its edge.
-     */
-    fun canScrollHorizontally(direction: Int): Boolean {
-        return when {
-            binding.image.isVisible ->
-                binding.image.scale > 1f && binding.image.canScrollHorizontally(direction)
-            binding.largeImage.isVisible ->
-                binding.largeImage.isImageLoaded && binding.largeImage.canScrollHorizontally(
-                    direction
-                )
-            else -> false
+    private fun View.installPanInterceptor(canPan: (direction: Int) -> Boolean) {
+        var lastX = 0f
+        var disallowed = false
+        setOnTouchListener { view, motionEvent ->
+            when (motionEvent.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    lastX = motionEvent.x
+                    disallowed = false
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    // Finger moved right means the image should pan right, revealing its left side.
+                    val direction = if (motionEvent.x > lastX) -1 else 1
+                    lastX = motionEvent.x
+                    if (!disallowed && canPan(direction)) {
+                        disallowed = true
+                        view.parent?.requestDisallowInterceptTouchEvent(true)
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (disallowed) {
+                        view.parent?.requestDisallowInterceptTouchEvent(false)
+                    }
+                    disallowed = false
+                }
+            }
+            // Never consume the event so that the view keeps handling gestures itself.
+            false
         }
     }
 

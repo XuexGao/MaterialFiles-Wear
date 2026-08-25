@@ -17,7 +17,6 @@ import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
-import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import dev.chrisbanes.insetter.applySystemWindowInsetsToPadding
 import java8.nio.file.Path
@@ -115,12 +114,6 @@ class ImageViewerFragment : Fragment(), ConfirmDeleteDialogFragment.Listener {
                     updateTitle()
                 }
             })
-            canCurrentPageScrollHorizontally = { direction ->
-                val holder = (getChildAt(0) as? RecyclerView)
-                    ?.findViewHolderForAdapterPosition(currentItem)
-                    as? ImageViewerAdapter.ViewHolder
-                holder?.canScrollHorizontally(direction) ?: false
-            }
         }
     }
 

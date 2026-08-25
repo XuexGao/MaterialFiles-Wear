@@ -12,6 +12,7 @@ import androidx.annotation.StyleRes
 import androidx.preference.Preference
 import me.zhanghai.android.files.R
 import me.zhanghai.android.files.app.application
+import me.zhanghai.android.files.util.getInteger
 
 class UiScalePreference : Preference {
     constructor(context: Context) : super(context)

@@ -18,8 +18,8 @@ import me.zhanghai.android.files.util.getState
 import me.zhanghai.android.files.util.putState
 
 class UiScalePreferenceDialogFragment : MaterialPreferenceDialogFragmentCompat() {
-    override val preference: UiScalePreference
-        get() = super.preference as UiScalePreference
+    private val uiScalePreference: UiScalePreference
+        get() = preference as UiScalePreference
 
     private var scale = 0
 
@@ -31,7 +31,7 @@ class UiScalePreferenceDialogFragment : MaterialPreferenceDialogFragmentCompat()
 
         scale =
             if (savedInstanceState == null) {
-                preference.scale
+                uiScalePreference.scale
             } else {
                 savedInstanceState.getState<State>().scale
             }
@@ -81,8 +81,8 @@ class UiScalePreferenceDialogFragment : MaterialPreferenceDialogFragmentCompat()
     }
 
     override fun onDialogClosed(positiveResult: Boolean) {
-        if (positiveResult && scale != preference.scale) {
-            preference.scale = scale
+        if (positiveResult && scale != uiScalePreference.scale) {
+            uiScalePreference.scale = scale
         }
     }
 
