@@ -18,6 +18,7 @@ import coil.dispose
 import coil.load
 import coil.size.Size
 import com.davemorrissey.labs.subscaleview.ImageSource
+import com.github.chrisbanes.photoview.PhotoView
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView.DefaultOnImageEventListener
 import java8.nio.file.Path
@@ -79,7 +80,7 @@ class ImageViewerAdapter(
         binding.largeImage.recycle()
     }
 
-    private fun View.installQuickScaleAndTap(listener: (View) -> Unit) {
+    private fun PhotoView.installQuickScaleAndTap(listener: (View) -> Unit) {
         val photoView = this
         var baseScale = 0f
         var anchorX = 0f
