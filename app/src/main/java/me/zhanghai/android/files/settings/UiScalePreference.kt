@@ -15,7 +15,6 @@ import me.zhanghai.android.files.R
 import me.zhanghai.android.files.app.application
 import me.zhanghai.android.files.app.defaultSharedPreferences
 import me.zhanghai.android.files.util.getInteger
-import kotlin.math.minOf
 import kotlin.math.roundToInt
 
 class UiScalePreference : Preference {

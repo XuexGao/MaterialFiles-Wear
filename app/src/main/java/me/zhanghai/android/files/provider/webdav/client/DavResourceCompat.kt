@@ -7,7 +7,6 @@ package me.zhanghai.android.files.provider.webdav.client
 
 import at.bitfire.dav4jvm.QuotedStringUtils
 import at.bitfire.dav4jvm.ktor.DavResource
-import at.bitfire.dav4jvm.ktor.UrlUtils.resolve
 import at.bitfire.dav4jvm.ktor.exception.DavException
 import at.bitfire.dav4jvm.ktor.exception.HttpException
 import io.ktor.client.HttpClient
@@ -35,7 +34,6 @@ import io.ktor.utils.io.copyAndClose
 import io.ktor.utils.io.jvm.javaio.toInputStream
 import io.ktor.utils.io.jvm.javaio.toOutputStream
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +45,8 @@ import java.io.InputStream
 import java.io.InterruptedIOException
 import java.io.OutputStream
 import java.nio.ByteBuffer
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicReference
 import me.zhanghai.android.files.provider.common.DelegateOutputStream
 
 /**
@@ -110,7 +110,8 @@ fun HttpClient.putCompat(
             append(key, value)
         }
     }
-    val result = CompletableDeferred<Unit>()
+    val error = AtomicReference<Throwable?>()
+    val finished = CountDownLatch(1)
     @OptIn(DelicateCoroutinesApi::class)
     GlobalScope.launch(Dispatchers.IO) {
         try {
@@ -120,15 +121,21 @@ fun HttpClient.putCompat(
             }.execute { response ->
                 checkStatusCompat(response)
             }
-            result.complete(Unit)
         } catch (e: Throwable) {
-            result.completeExceptional(e)
+            error.set(e)
+        } finally {
+            finished.countDown()
         }
     }
     return object : DelegateOutputStream(channel.toOutputStream()) {
         override fun close() {
             super.close()
-            result.await()
+            try {
+                finished.await()
+            } catch (e: InterruptedException) {
+                throw InterruptedIOException().apply { initCause(e) }
+            }
+            error.get()?.let { throw it }
         }
     }
 }
@@ -170,7 +177,9 @@ fun HttpClient.patchCompat(
                 method = HttpMethod.parse("PATCH")
 
                 header("X-Update-Range", "bytes=$offset-${offset + bytes.size - 1}")
-                ifHeaders(ifETag, ifScheduleTag, ifNoneMatch)
+                headers {
+                    ifHeaders(ifETag, ifScheduleTag, ifNoneMatch)
+                }
 
                 setBody(ByteArrayContent(bytes, SABRE_PATCH_CONTENT_TYPE))
             }
@@ -194,7 +203,9 @@ fun HttpClient.putRangeCompat(
         followRedirectsCompat(location, { currentLocation ->
             preparePut(currentLocation) {
                 header(HttpHeaders.Range, "bytes=$offset-${offset + bytes.size - 1}/*")
-                ifHeaders(ifETag, ifScheduleTag, ifNoneMatch)
+                headers {
+                    ifHeaders(ifETag, ifScheduleTag, ifNoneMatch)
+                }
 
                 setBody(ByteArrayContent(bytes))
             }
@@ -207,7 +218,7 @@ fun HttpClient.putRangeCompat(
 private fun additionalAcceptHeaders(accept: String, headers: Headers?): Headers = Headers.build {
     append(HttpHeaders.Accept, accept)
     if (headers != null) {
-        for (name in headers.names) {
+        for (name in headers.names()) {
             for (value in headers.getAll(name) ?: emptyList()) {
                 append(name, value)
             }

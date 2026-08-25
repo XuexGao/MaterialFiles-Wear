@@ -21,7 +21,6 @@ import me.zhanghai.android.files.provider.common.UriAuthority
 import me.zhanghai.android.files.provider.webdav.client.Authority
 import me.zhanghai.android.files.provider.webdav.client.Client
 import me.zhanghai.android.files.util.readParcelable
-import io.ktor.http.PROTOCOL_DEFAULT_PORT
 import io.ktor.http.URLBuilder
 import io.ktor.http.URLProtocol
 import io.ktor.http.Url
@@ -94,18 +93,17 @@ internal class WebDavPath : ByteStringListPath<WebDavPath>, Client.Path {
     override val url: Url
         get() {
             val port = authority.port
-            return URLBuilder(
+            val builder = URLBuilder(
                 protocol = URLProtocol(
                     authority.protocol.httpScheme, authority.protocol.defaultPort
                 ),
                 host = authority.host,
-                port = if (port != authority.protocol.defaultPort) {
-                    port
-                } else {
-                    PROTOCOL_DEFAULT_PORT
-                },
                 pathSegments = toString().removePrefix("/").split('/')
-            ).build()
+            )
+            if (port != authority.protocol.defaultPort) {
+                builder.port = port
+            }
+            return builder.build()
         }
 
     private constructor(source: Parcel) : super(source) {

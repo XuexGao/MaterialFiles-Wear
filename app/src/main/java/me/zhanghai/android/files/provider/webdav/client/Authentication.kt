@@ -13,7 +13,6 @@ import at.bitfire.dav4jvm.ktor.UrlUtils
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.engine.okhttp.engine
 import io.ktor.client.plugins.auth.Auth
 import io.ktor.client.plugins.auth.AuthProvider
 import io.ktor.client.request.HttpRequestBuilder
@@ -86,6 +85,11 @@ private class BearerAccessTokenAuthProvider(
     private val host: String,
     private val accessToken: String
 ) : AuthProvider {
+    @Suppress("OverridingDeprecatedMember", "DEPRECATION_ERROR")
+    @Deprecated("Please use sendWithoutRequest function instead", level = DeprecationLevel.ERROR)
+    override val sendWithoutRequest: Boolean
+        get() = error("Deprecated")
+
     override fun sendWithoutRequest(request: HttpRequestBuilder): Boolean = isDomainMatch(request)
 
     override fun isApplicable(auth: HttpAuthHeader): Boolean = false
