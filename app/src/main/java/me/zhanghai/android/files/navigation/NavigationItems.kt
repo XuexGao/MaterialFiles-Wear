@@ -361,7 +361,7 @@ private class BookmarkDirectoryItem(
     }
 }
 
-private class NavigationTitleItem(
+internal class NavigationTitleItem(
     @StringRes private val titleRes: Int
 ) : NavigationItem() {
     override val id: Long

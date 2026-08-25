@@ -80,18 +80,19 @@ class ImageViewerAdapter(
     }
 
     private fun View.installQuickScaleAndTap(listener: (View) -> Unit) {
+        val photoView = this
         var baseScale = 0f
         var anchorX = 0f
         var anchorY = 0f
         var quickScaling = false
-        attacher?.setOnDoubleTapListener(object : GestureDetector.OnDoubleTapListener {
+        photoView.attacher?.setOnDoubleTapListener(object : GestureDetector.OnDoubleTapListener {
             override fun onSingleTapConfirmed(motionEvent: MotionEvent): Boolean {
-                listener(this@installQuickScaleAndTap)
+                listener(photoView)
                 return true
             }
 
             override fun onDoubleTap(motionEvent: MotionEvent): Boolean {
-                baseScale = scale
+                baseScale = photoView.scale
                 anchorX = motionEvent.x
                 anchorY = motionEvent.y
                 quickScaling = true
@@ -103,10 +104,11 @@ class ImageViewerAdapter(
                     MotionEvent.ACTION_MOVE -> if (quickScaling) {
                         // Dragging up zooms in and dragging down zooms out; dragging by half the
                         // view height doubles the zoom.
-                        val progress = (anchorY - motionEvent.y) / (height * 0.5f)
-                        val targetScale =
-                            baseScale * (1f + progress).coerceIn(minimumScale, maximumScale)
-                        attacher.setScale(targetScale, anchorX, anchorY, false)
+                        val progress = (anchorY - motionEvent.y) / (photoView.height * 0.5f)
+                        val targetScale = baseScale * (1f + progress).coerceIn(
+                            photoView.minimumScale, photoView.maximumScale
+                        )
+                        photoView.attacher.setScale(targetScale, anchorX, anchorY, false)
                     }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> quickScaling = false
                 }
