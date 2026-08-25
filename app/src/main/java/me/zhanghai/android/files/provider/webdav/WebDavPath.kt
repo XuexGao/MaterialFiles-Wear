@@ -93,12 +93,18 @@ internal class WebDavPath : ByteStringListPath<WebDavPath>, Client.Path {
     override val url: Url
         get() {
             val port = authority.port
+            // Ktor marks absolute paths with a leading empty segment (Url("/a").rawSegments ==
+            // listOf("", "a")), and dav4jvm compares request and href segments verbatim, so the
+            // marker must be present or every member gets classified as unrelated and directory
+            // listings come back empty.
+            val segments =
+                listOf("") + toString().removePrefix("/").split('/').filter { it.isNotEmpty() }
             val builder = URLBuilder(
                 protocol = URLProtocol(
                     authority.protocol.httpScheme, authority.protocol.defaultPort
                 ),
                 host = authority.host,
-                pathSegments = toString().removePrefix("/").split('/')
+                pathSegments = segments
             )
             if (port != authority.protocol.defaultPort) {
                 builder.port = port

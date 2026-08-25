@@ -531,6 +531,7 @@
 
     <string name="navigation_storage_subtitle_format">共 %2$s，剩余 %1$s</string>
     <string name="navigation_add_storage">添加存储空间…</string>
+    <string name="navigation_tools">工具</string>
     <string name="navigation_standard_directory_alarms">闹钟</string>
     <string name="navigation_standard_directory_dcim">相片</string>
     <string name="navigation_standard_directory_documents">文档</string>

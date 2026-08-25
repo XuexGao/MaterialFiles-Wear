@@ -10,14 +10,16 @@ import android.content.res.Resources
 import android.util.AttributeSet
 import androidx.annotation.AttrRes
 import androidx.annotation.StyleRes
-import androidx.preference.Preference
+import androidx.preference.DialogPreference
 import me.zhanghai.android.files.R
 import me.zhanghai.android.files.app.application
 import me.zhanghai.android.files.app.defaultSharedPreferences
 import me.zhanghai.android.files.util.getInteger
 import kotlin.math.roundToInt
 
-class UiScalePreference : Preference {
+// Extends DialogPreference so that MaterialPreferenceDialogFragmentCompat can read the title and
+// buttons from it; otherwise tapping the preference in the settings would crash.
+class UiScalePreference : DialogPreference {
     constructor(context: Context) : super(context)
 
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)

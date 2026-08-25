@@ -6,6 +6,7 @@
 package me.zhanghai.android.files.viewer.image
 
 import android.graphics.BitmapFactory
+import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -59,8 +60,9 @@ class ImageViewerAdapter(
         binding.root.setOnClickListener { listener(it) }
         binding.progress.setOnClickListener(listener)
         binding.errorText.setOnClickListener(listener)
-        binding.image.setOnPhotoTapListener { view, _, _ -> listener(view) }
-        binding.image.attacher?.setOnOutsidePhotoTapListener { view -> listener(view) }
+        // Double tapping and dragging up/down adjusts the zoom continuously, matching the quick
+        // scale gesture of SubsamplingScaleImageView.
+        binding.image.installQuickScaleAndTap(listener)
         binding.largeImage.setOnClickListener(listener)
         // While the image is zoomed in, horizontal swipes pan it; pages are only switched once its
         // edge has been reached.
@@ -75,6 +77,42 @@ class ImageViewerAdapter(
         val binding = holder.binding
         binding.image.dispose()
         binding.largeImage.recycle()
+    }
+
+    private fun View.installQuickScaleAndTap(listener: (View) -> Unit) {
+        var baseScale = 0f
+        var anchorX = 0f
+        var anchorY = 0f
+        var quickScaling = false
+        attacher?.setOnDoubleTapListener(object : GestureDetector.OnDoubleTapListener {
+            override fun onSingleTapConfirmed(motionEvent: MotionEvent): Boolean {
+                listener(this@installQuickScaleAndTap)
+                return true
+            }
+
+            override fun onDoubleTap(motionEvent: MotionEvent): Boolean {
+                baseScale = scale
+                anchorX = motionEvent.x
+                anchorY = motionEvent.y
+                quickScaling = true
+                return true
+            }
+
+            override fun onDoubleTapEvent(motionEvent: MotionEvent): Boolean {
+                when (motionEvent.actionMasked) {
+                    MotionEvent.ACTION_MOVE -> if (quickScaling) {
+                        // Dragging up zooms in and dragging down zooms out; dragging by half the
+                        // view height doubles the zoom.
+                        val progress = (anchorY - motionEvent.y) / (height * 0.5f)
+                        val targetScale =
+                            baseScale * (1f + progress).coerceIn(minimumScale, maximumScale)
+                        attacher.setScale(targetScale, anchorX, anchorY, false)
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> quickScaling = false
+                }
+                return true
+            }
+        })
     }
 
     private fun View.installPanInterceptor(canPan: (direction: Int) -> Boolean) {
