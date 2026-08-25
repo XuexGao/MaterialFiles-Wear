@@ -23,6 +23,7 @@ import me.zhanghai.android.files.storage.StorageVolumeListLiveData
 import me.zhanghai.android.files.storage.WebDavServerAuthenticator
 import me.zhanghai.android.files.theme.custom.CustomThemeHelper
 import me.zhanghai.android.files.theme.night.NightModeHelper
+import me.zhanghai.android.files.ui.UiScaleHelper
 import java.util.Properties
 import me.zhanghai.android.files.provider.ftp.client.Client as FtpClient
 import me.zhanghai.android.files.provider.sftp.client.Client as SftpClient
@@ -39,6 +40,7 @@ val appInitializers = listOf(
     ::initializeLiveDataObjects,
     ::initializeCustomTheme,
     ::initializeNightMode,
+    ::initializeUiScale,
     ::createNotificationChannels
 )
 
@@ -88,6 +90,10 @@ private fun initializeCustomTheme() {
 
 private fun initializeNightMode() {
     NightModeHelper.initialize(application)
+}
+
+private fun initializeUiScale() {
+    UiScaleHelper.initialize(application)
 }
 
 private fun createNotificationChannels() {

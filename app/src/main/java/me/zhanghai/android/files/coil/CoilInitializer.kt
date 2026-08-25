@@ -32,6 +32,9 @@ fun initializeCoil() {
                 )
                 add(SvgDecoder.Factory(false))
             }
+            // Halves bitmap memory for opaque thumbnails, which helps a lot on low-end watch
+            // devices with little RAM.
+            .allowRgb565(true)
             .build()
     )
 }

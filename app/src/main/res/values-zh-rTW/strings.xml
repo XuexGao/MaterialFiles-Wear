@@ -599,6 +599,8 @@
         <item>基於省電模式</item>
     </string-array>
     <string name="settings_black_night_mode">黑色夜間模式</string>
+    <string name="settings_ui_scale_title">介面縮放</string>
+    <string name="settings_ui_scale_summary">按百分比縮小或放大整個介面，適配小螢幕手錶</string>
     <string name="settings_file_list_animation_title">檔案列表動畫</string>
     <string name="settings_file_name_ellipsize_title">顯示長檔案名稱</string>
     <string-array name="settings_file_name_ellipsize_entries">

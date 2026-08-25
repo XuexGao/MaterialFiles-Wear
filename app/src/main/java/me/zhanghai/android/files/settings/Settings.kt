@@ -121,6 +121,12 @@ object Settings {
             R.string.pref_key_black_night_mode, R.bool.pref_default_value_black_night_mode
         )
 
+    /**
+     * The UI scale in percent, applied by shrinking every activity's density. 100 means unscaled.
+     */
+    val UI_SCALE: SettingLiveData<Int> =
+        IntegerSettingLiveData(R.string.pref_key_ui_scale, R.integer.pref_default_value_ui_scale)
+
     val FILE_LIST_ANIMATION: SettingLiveData<Boolean> =
         BooleanSettingLiveData(
             R.string.pref_key_file_list_animation, R.bool.pref_default_value_file_list_animation

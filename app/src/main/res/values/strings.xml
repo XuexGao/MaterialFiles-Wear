@@ -747,6 +747,8 @@
         <item>Based on battery saver</item>
     </string-array>
     <string name="settings_black_night_mode">Black night mode</string>
+    <string name="settings_ui_scale_title">UI scale</string>
+    <string name="settings_ui_scale_summary">Shrink or enlarge the entire interface as a percentage, for small watch screens</string>
     <string name="settings_file_list_animation_title">File list animation</string>
     <string name="settings_file_name_ellipsize_title">Display long file name</string>
     <string-array name="settings_file_name_ellipsize_entries">
