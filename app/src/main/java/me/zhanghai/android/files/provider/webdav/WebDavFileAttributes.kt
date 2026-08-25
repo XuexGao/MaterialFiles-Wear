@@ -6,7 +6,7 @@
 package me.zhanghai.android.files.provider.webdav
 
 import android.os.Parcelable
-import at.bitfire.dav4jvm.Response
+import at.bitfire.dav4jvm.ktor.Response
 import java.time.Instant
 import java8.nio.file.attribute.FileTime
 import kotlinx.parcelize.Parcelize

@@ -5,19 +5,22 @@
 
 package me.zhanghai.android.files.provider.webdav.client
 
-import at.bitfire.dav4jvm.DavResource
-import at.bitfire.dav4jvm.exception.HttpException
+import at.bitfire.dav4jvm.ktor.DavResource
+import at.bitfire.dav4jvm.ktor.exception.HttpException
 import at.bitfire.dav4jvm.property.webdav.GetContentLength
+import at.bitfire.dav4jvm.property.webdav.WebDAV
+import io.ktor.client.HttpClient
+import io.ktor.http.content.ByteArrayContent
 import me.zhanghai.android.files.provider.common.AbstractFileByteChannel
 import me.zhanghai.android.files.provider.common.EMPTY
 import me.zhanghai.android.files.provider.common.readFully
-import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.io.OutputStream
 import java.nio.ByteBuffer
 
 // https://blog.sphere.chronosempire.org.uk/2012/11/21/webdav-and-the-http-patch-nightmare
 class FileByteChannel(
+    private val httpClient: HttpClient,
     private val resource: DavResource,
     private val patchSupport: PatchSupport,
     isAppend: Boolean
@@ -30,7 +33,7 @@ class FileByteChannel(
         val inputStream = try {
             resource.getRangeCompat("*/*", position, size, null)
         } catch (e: HttpException) {
-            if (e.code == HTTP_RANGE_NOT_SATISFIABLE) {
+            if (e.statusCode == HTTP_RANGE_NOT_SATISFIABLE) {
                 // We were reading at/past end of file
                 return ByteBuffer::class.EMPTY
             }
@@ -48,15 +51,17 @@ class FileByteChannel(
     override fun onWrite(position: Long, source: ByteBuffer) {
         when (patchSupport) {
             PatchSupport.APACHE ->
-                resource.putRangeCompat(source, position) {}
+                httpClient.putRangeCompat(resource.location, source, position)
             PatchSupport.SABRE ->
-                resource.patchCompat(source, position) {}
+                httpClient.patchCompat(resource.location, source, position)
             PatchSupport.NONE -> {
                 if (position != nextSequentialWritePosition) {
                     throw IOException("Unsupported non-sequential write")
                 }
                 val outputStream = sequentialWriteOutputStream
-                    ?: resource.putCompat().also { sequentialWriteOutputStream = it }
+                    ?: httpClient.putCompat(resource.location).also {
+                        sequentialWriteOutputStream = it
+                    }
                 val remaining = source.remaining()
                 // I don't think we are using native or read-only ByteBuffer, so just call array()
                 // here.
@@ -71,7 +76,7 @@ class FileByteChannel(
     @Throws(IOException::class)
     override fun onTruncate(size: Long) {
         if (size == 0L) {
-            resource.put(byteArrayOf().toRequestBody()) {}
+            runBlockingIo { resource.put(ByteArrayContent(byteArrayOf())) {} }
         } else {
             throw IOException("Unsupported truncate to non-zero size")
         }
@@ -80,7 +85,7 @@ class FileByteChannel(
     @Throws(IOException::class)
     override fun onSize(): Long {
         val getContentLength =
-            Client.findProperties(resource, GetContentLength.NAME)[GetContentLength::class.java]
+            Client.findProperties(resource, WebDAV.GetContentLength)[GetContentLength::class.java]
                 ?: throw IOException("Missing GetContentLength")
         return getContentLength.contentLength ?: throw IOException("Invalid GetContentLength")
     }

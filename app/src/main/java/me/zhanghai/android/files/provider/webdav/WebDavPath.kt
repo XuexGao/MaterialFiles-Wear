@@ -21,7 +21,10 @@ import me.zhanghai.android.files.provider.common.UriAuthority
 import me.zhanghai.android.files.provider.webdav.client.Authority
 import me.zhanghai.android.files.provider.webdav.client.Client
 import me.zhanghai.android.files.util.readParcelable
-import okhttp3.HttpUrl
+import io.ktor.http.PROTOCOL_DEFAULT_PORT
+import io.ktor.http.URLBuilder
+import io.ktor.http.URLProtocol
+import io.ktor.http.Url
 import java.io.File
 import java.io.IOException
 
@@ -88,18 +91,22 @@ internal class WebDavPath : ByteStringListPath<WebDavPath>, Client.Path {
     override val authority: Authority
         get() = fileSystem.authority
 
-    override val url: HttpUrl
-        get() = HttpUrl.Builder()
-            .scheme(authority.protocol.httpScheme)
-            .host(authority.host)
-            .apply {
-                val port = authority.port
-                if (port != authority.protocol.defaultPort) {
-                    port(port)
-                }
-            }
-            .addPathSegments(toString().removePrefix("/"))
-            .build()
+    override val url: Url
+        get() {
+            val port = authority.port
+            return URLBuilder(
+                protocol = URLProtocol(
+                    authority.protocol.httpScheme, authority.protocol.defaultPort
+                ),
+                host = authority.host,
+                port = if (port != authority.protocol.defaultPort) {
+                    port
+                } else {
+                    PROTOCOL_DEFAULT_PORT
+                },
+                pathSegments = toString().removePrefix("/").split('/')
+            ).build()
+        }
 
     private constructor(source: Parcel) : super(source) {
         fileSystem = source.readParcelable()!!

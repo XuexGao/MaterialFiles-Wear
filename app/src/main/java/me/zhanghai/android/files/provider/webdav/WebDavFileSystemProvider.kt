@@ -5,7 +5,7 @@
 
 package me.zhanghai.android.files.provider.webdav
 
-import at.bitfire.dav4jvm.exception.DavException
+import at.bitfire.dav4jvm.ktor.exception.DavException
 import java8.nio.channels.FileChannel
 import java8.nio.channels.SeekableByteChannel
 import java8.nio.file.AccessMode

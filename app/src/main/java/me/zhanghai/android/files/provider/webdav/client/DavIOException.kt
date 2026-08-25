@@ -5,10 +5,10 @@
 
 package me.zhanghai.android.files.provider.webdav.client
 
-import at.bitfire.dav4jvm.exception.DavException
+import at.bitfire.dav4jvm.ktor.exception.DavException
 import java.io.IOException
 
-class DavIOException(cause: IOException) : DavException(cause.message ?: "", cause) {
+class DavIOException(cause: IOException) : DavException(cause.message ?: "", cause = cause) {
     override val cause: Throwable
         get() = super.cause!!
 }

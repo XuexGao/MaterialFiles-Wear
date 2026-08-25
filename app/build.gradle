@@ -107,15 +107,16 @@ repositories {
     }
 }
 dependencies {
-    // JitPack no longer serves builds of arbitrary commits of the upstream project, and all of its
-    // current release tags use a rewritten Ktor-based API that our WebDAV provider doesn't target.
-    // So we depend on our own pinned fork instead, built by JitPack from
-    // https://github.com/XuexGao/dav4jvm (bitfireAT/dav4jvm @ 02fe1a95e6, which contains
-    // https://github.com/bitfireAT/dav4jvm/commit/c1bc14348831bcdb00f3a6eec4859b81c7dc3728 ,
-    // plus a jitpack.yml for JDK 17).
-    implementation('com.github.XuexGao:dav4jvm:7e09aaaf6d') {
+    // dav4jvm 4.0.0 is Ktor-based. Its ktor-client-auth and engine dependencies are
+    // implementation-scoped, so declare the auth plugin and the OkHttp engine ourselves.
+    // The xpp3 exclusion stays because Android already ships org.xmlpull; the guava exclusion
+    // keeps the app's android-flavor Guava instead of dav4jvm's JRE one.
+    implementation('com.github.bitfireAT:dav4jvm:4.0.0') {
         exclude group: 'org.ogce', module: 'xpp3'
+        exclude group: 'com.google.guava', module: 'guava'
     }
+    implementation 'io.ktor:ktor-client-auth:3.5.1'
+    implementation 'io.ktor:ktor-client-okhttp:3.5.1'
     implementation 'com.github.chrisbanes:PhotoView:2.3.0'
     implementation 'com.github.topjohnwu.libsu:service:5.2.2'
 }

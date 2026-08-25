@@ -5,7 +5,7 @@
 
 package me.zhanghai.android.files.provider.webdav
 
-import at.bitfire.dav4jvm.exception.DavException
+import at.bitfire.dav4jvm.ktor.exception.DavException
 import java8.nio.file.FileAlreadyExistsException
 import java8.nio.file.NoSuchFileException
 import java8.nio.file.StandardCopyOption

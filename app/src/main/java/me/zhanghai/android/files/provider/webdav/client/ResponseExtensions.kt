@@ -6,18 +6,19 @@
 package me.zhanghai.android.files.provider.webdav.client
 
 import at.bitfire.dav4jvm.HttpUtils
-import at.bitfire.dav4jvm.Response
+import at.bitfire.dav4jvm.ktor.Response
 import at.bitfire.dav4jvm.property.webdav.CreationDate
 import at.bitfire.dav4jvm.property.webdav.GetContentLength
 import at.bitfire.dav4jvm.property.webdav.GetLastModified
 import at.bitfire.dav4jvm.property.webdav.ResourceType
+import at.bitfire.dav4jvm.property.webdav.WebDAV
 import java.time.Instant
 
 val Response.creationTime: Instant?
     get() = this[CreationDate::class.java]?.creationDate?.let { HttpUtils.parseDate(it) }
 
 val Response.isDirectory: Boolean
-    get() = this[ResourceType::class.java]?.types?.contains(ResourceType.COLLECTION) == true
+    get() = this[ResourceType::class.java]?.types?.contains(WebDAV.Collection) == true
 
 val Response.isSymbolicLink: Boolean
     get() = newLocation != null

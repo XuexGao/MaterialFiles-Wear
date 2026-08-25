@@ -5,7 +5,7 @@
 
 package me.zhanghai.android.files.provider.webdav
 
-import at.bitfire.dav4jvm.exception.DavException
+import at.bitfire.dav4jvm.ktor.exception.DavException
 import java8.nio.file.LinkOption
 import java8.nio.file.attribute.BasicFileAttributeView
 import java8.nio.file.attribute.FileTime

@@ -6,82 +6,69 @@
 package me.zhanghai.android.files.provider.webdav.client
 
 import java8.nio.file.Path as Java8Path
-import okhttp3.Response as OkHttpResponse
-import at.bitfire.dav4jvm.DavCollection
-import at.bitfire.dav4jvm.DavResource
 import at.bitfire.dav4jvm.HttpUtils
 import at.bitfire.dav4jvm.Property
-import at.bitfire.dav4jvm.Response
-import at.bitfire.dav4jvm.exception.ConflictException
-import at.bitfire.dav4jvm.exception.DavException
-import at.bitfire.dav4jvm.exception.ForbiddenException
-import at.bitfire.dav4jvm.exception.HttpException
-import at.bitfire.dav4jvm.exception.NotFoundException
-import at.bitfire.dav4jvm.exception.PreconditionFailedException
-import at.bitfire.dav4jvm.exception.ServiceUnavailableException
-import at.bitfire.dav4jvm.exception.UnauthorizedException
-import at.bitfire.dav4jvm.property.webdav.CreationDate
-import at.bitfire.dav4jvm.property.webdav.GetContentLength
-import at.bitfire.dav4jvm.property.webdav.GetLastModified
-import at.bitfire.dav4jvm.property.webdav.ResourceType
+import at.bitfire.dav4jvm.ktor.DavCollection
+import at.bitfire.dav4jvm.ktor.DavResource
+import at.bitfire.dav4jvm.ktor.MultiStatusItem
+import at.bitfire.dav4jvm.ktor.Response
+import at.bitfire.dav4jvm.ktor.exception.DavException
+import at.bitfire.dav4jvm.ktor.exception.NotFoundException
+import at.bitfire.dav4jvm.property.webdav.WebDAV
+import io.ktor.client.HttpClient
+import io.ktor.http.Url
+import kotlinx.coroutines.flow.collect
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
-import java.net.HttpURLConnection
-import java.time.Instant
 import java.util.Collections
 import java.util.WeakHashMap
+import java.time.Instant
 import java8.nio.channels.SeekableByteChannel
-import me.zhanghai.android.files.app.okHttpClient
 import me.zhanghai.android.files.provider.common.LocalWatchService
 import me.zhanghai.android.files.provider.common.NotifyEntryModifiedOutputStream
 import me.zhanghai.android.files.provider.common.NotifyEntryModifiedSeekableByteChannel
-import okhttp3.HttpUrl
-import okhttp3.Interceptor
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Route
 
 // See also https://github.com/miquels/webdavfs/blob/master/fuse.go
 object Client {
     private val FILE_PROPERTIES = arrayOf(
-        ResourceType.NAME,
-        CreationDate.NAME,
-        GetContentLength.NAME,
-        GetLastModified.NAME
+        WebDAV.ResourceType,
+        WebDAV.CreationDate,
+        WebDAV.GetContentLength,
+        WebDAV.GetLastModified
     )
 
     @Volatile
     lateinit var authenticator: Authenticator
 
-    private val clients = mutableMapOf<Authority, OkHttpClient>()
+    private val clients = mutableMapOf<Authority, Pair<Authentication, HttpClient>>()
 
     private val collectionMemberCache = Collections.synchronizedMap(WeakHashMap<Path, Response>())
 
     @Throws(IOException::class)
-    private fun getClient(authority: Authority): OkHttpClient {
+    private fun getClient(authority: Authority): HttpClient {
         synchronized(clients) {
-            var client = clients[authority]
-            if (client == null) {
-                val authenticatorInterceptor =
-                    OkHttpAuthenticatorInterceptor(authenticator, authority)
-                client = okHttpClient.newBuilder()
-                    // Turn off follow redirects for PROPFIND.
-                    .followRedirects(false)
-                    .cookieJar(MemoryCookieJar())
-                    .addNetworkInterceptor(authenticatorInterceptor)
-                    .authenticator(authenticatorInterceptor)
-                    .build()
-                clients[authority] = client
+            val authentication =
+                authenticator.getAuthentication(authority)
+                    ?: throw IOException("No authentication found for $authority")
+            val cached = clients[authority]
+            return if (cached != null && cached.first == authentication) {
+                cached.second
+            } else {
+                cached?.second?.close()
+                authentication.createHttpClient(authority).also {
+                    clients[authority] = authentication to it
+                }
             }
-            return client
         }
     }
 
     @Throws(DavException::class)
     fun makeCollection(path: Path) {
         try {
-            DavResource(getClient(path.authority), path.url).mkCol(null) {}
+            runBlockingIo {
+                DavResource(getClient(path.authority), path.url).mkCol(null) {}
+            }
         } catch (e: IOException) {
             throw e.toDavException()
         }
@@ -101,7 +88,9 @@ object Client {
     @Throws(DavException::class)
     fun delete(path: Path) {
         try {
-            DavResource(getClient(path.authority), path.url).delete {}
+            runBlockingIo {
+                DavResource(getClient(path.authority), path.url).delete {}
+            }
         } catch (e: IOException) {
             throw e.toDavException()
         }
@@ -115,7 +104,9 @@ object Client {
             throw IOException("Paths aren't on the same authority")
         }
         try {
-            DavResource(getClient(source.authority), source.url).move(target.url, false) {}
+            runBlockingIo {
+                DavResource(getClient(source.authority), source.url).move(target.url, false) {}
+            }
         } catch (e: IOException) {
             throw e.toDavException()
         }
@@ -137,18 +128,25 @@ object Client {
     fun findCollectionMembers(path: Path): List<Path> =
         buildList {
             try {
-                DavCollection(getClient(path.authority), path.url)
-                    .propfind(1, *FILE_PROPERTIES) { response, relation ->
-                        if (relation != Response.HrefRelation.MEMBER) {
-                            return@propfind
-                        }
-                        this += path.resolve(response.hrefName())
-                            .also {
-                                if (response.isSuccess()) {
-                                    collectionMemberCache[it] = response
-                                }
+                runBlockingIo {
+                    DavCollection(getClient(path.authority), path.url)
+                        .propfind(1, *FILE_PROPERTIES)
+                        .collect { item ->
+                            if (item !is MultiStatusItem.Response) {
+                                return@collect
                             }
-                    }
+                            if (item.relation != Response.HrefRelation.MEMBER) {
+                                return@collect
+                            }
+                            val response = item.response
+                            this@buildList += path.resolve(response.hrefName())
+                                .also {
+                                    if (response.isSuccess()) {
+                                        collectionMemberCache[it] = response
+                                    }
+                                }
+                        }
+                }
             } catch (e: IOException) {
                 throw e.toDavException()
             }
@@ -182,14 +180,20 @@ object Client {
     @Throws(DavException::class, IOException::class)
     internal fun findProperties(resource: DavResource, vararg properties: Property.Name): Response {
         var responseRef: Response? = null
-        resource.propfind(0, *properties) { response, relation ->
-            if (relation != Response.HrefRelation.SELF) {
-                return@propfind
-            }
-            if (responseRef != null) {
-                throw DavException("Duplicate response for self")
-            }
-            responseRef = response
+        runBlockingIo {
+            resource.propfind(0, *properties)
+                .collect { item ->
+                    if (item !is MultiStatusItem.Response) {
+                        return@collect
+                    }
+                    if (item.relation != Response.HrefRelation.SELF) {
+                        return@collect
+                    }
+                    if (responseRef != null) {
+                        throw DavException("Duplicate response for self")
+                    }
+                    responseRef = item.response
+                }
         }
         val response = responseRef ?: throw DavException("Couldn't find a response for self")
         response.checkSuccess()
@@ -203,7 +207,7 @@ object Client {
             val resource = DavResource(client, path.url)
             val patchSupport = resource.getPatchSupport()
             return NotifyEntryModifiedSeekableByteChannel(
-                FileByteChannel(resource, patchSupport, isAppend), path as Java8Path
+                FileByteChannel(client, resource, patchSupport, isAppend), path as Java8Path
             )
         } catch (e: IOException) {
             throw e.toDavException()
@@ -218,9 +222,16 @@ object Client {
         // The following doesn't work on most servers. See also
         // https://github.com/sabre-io/dav/issues/1277
         try {
-            DavResource(getClient(path.authority), path.url).proppatch(
-                mapOf(GetLastModified.NAME to HttpUtils.formatDate(lastModifiedTime)), emptyList()
-            ) { response, _ -> response.checkSuccess() }
+            runBlockingIo {
+                DavResource(getClient(path.authority), path.url).proppatch(
+                    mapOf(WebDAV.GetLastModified to HttpUtils.formatDate(lastModifiedTime)),
+                    emptyList()
+                ).collect { item ->
+                    if (item is MultiStatusItem.Response) {
+                        item.response.checkSuccess()
+                    }
+                }
+            }
         } catch (e: IOException) {
             throw e.toDavException()
         }
@@ -231,7 +242,7 @@ object Client {
     fun put(path: Path): OutputStream =
         try {
             NotifyEntryModifiedOutputStream(
-                DavResource(getClient(path.authority), path.url).putCompat(), path as Java8Path
+                getClient(path.authority).putCompat(path.url), path as Java8Path
             )
         } catch (e: IOException) {
             throw e.toDavException()
@@ -243,48 +254,17 @@ object Client {
             return
         }
         val status = status!!
-        throw when (status.code) {
-            HttpURLConnection.HTTP_UNAUTHORIZED -> UnauthorizedException(status.message)
-            HttpURLConnection.HTTP_FORBIDDEN -> ForbiddenException(status.message)
-            HttpURLConnection.HTTP_NOT_FOUND -> NotFoundException(status.message)
-            HttpURLConnection.HTTP_CONFLICT -> ConflictException(status.message)
-            HttpURLConnection.HTTP_PRECON_FAILED -> PreconditionFailedException(status.message)
-            HttpURLConnection.HTTP_UNAVAILABLE -> ServiceUnavailableException(status.message)
-            else -> HttpException(status.code, status.message)
-        }
+        // dav4jvm 4.0.0 doesn't allow constructing its specific HttpException subclasses from
+        // outside, so carry the status code in a plain DavException and let
+        // DavExceptionExtensions map it to the corresponding file system exception.
+        throw DavException(
+            "HTTP ${status.value} ${status.description}", statusCode = status.value
+        )
     }
 
     interface Path {
         val authority: Authority
-        val url: HttpUrl
+        val url: Url
         fun resolve(other: String): Path
-    }
-
-    private class OkHttpAuthenticatorInterceptor(
-        private val authenticator: Authenticator,
-        private val authority: Authority
-    ) : AuthenticatorInterceptor {
-        private var authenticatorInterceptorCache: Pair<Authentication, AuthenticatorInterceptor>? =
-            null
-
-        private fun getAuthenticatorInterceptor(): AuthenticatorInterceptor {
-            val authentication = authenticator.getAuthentication(authority)
-                ?: throw IOException("No authentication found for $authority")
-            authenticatorInterceptorCache?.let {
-                (cachedAuthentication, cachedAuthenticatorInterceptor) ->
-                if (cachedAuthentication == authentication) {
-                    return cachedAuthenticatorInterceptor
-                }
-            }
-            return authentication.createAuthenticatorInterceptor(authority).also {
-                authenticatorInterceptorCache = authentication to it
-            }
-        }
-
-        override fun authenticate(route: Route?, response: OkHttpResponse): Request? =
-            getAuthenticatorInterceptor().authenticate(route, response)
-
-        override fun intercept(chain: Interceptor.Chain): OkHttpResponse =
-            getAuthenticatorInterceptor().intercept(chain)
     }
 }
