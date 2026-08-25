@@ -70,12 +70,28 @@ android {
         // Referenced from org.apache.mina.proxy.ProxyAuthException."
         warning 'InvalidPackage', 'MissingTranslation'
     }
+    signingConfigs {
+        // A fixed keystore committed to the repository, so that APKs built by CI always carry the
+        // same signature and can be installed over previous builds without uninstalling first.
+        // This is a fork-only convenience: the credentials are public by design.
+        ci {
+            storeFile rootProject.file('keystore/debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.ci
+        }
         release {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            // Use the fixed keystore here as well so that release builds stay installable over
+            // debug builds; switch back to signingConfigs.release for real store deployments.
+            signingConfig signingConfigs.ci
 //#ifdef NONFREE
             firebaseCrashlytics {
                 nativeSymbolUploadEnabled true
