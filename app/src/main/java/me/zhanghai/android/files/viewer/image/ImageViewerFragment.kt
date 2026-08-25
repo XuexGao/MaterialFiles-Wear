@@ -15,9 +15,9 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
+import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import dev.chrisbanes.insetter.applySystemWindowInsetsToPadding
 import java8.nio.file.Path
@@ -27,7 +27,6 @@ import me.zhanghai.android.files.R
 import me.zhanghai.android.files.databinding.ImageViewerFragmentBinding
 import me.zhanghai.android.files.file.fileProviderUri
 import me.zhanghai.android.files.provider.common.delete
-import me.zhanghai.android.files.ui.DepthPageTransformer
 import me.zhanghai.android.files.util.ParcelableArgs
 import me.zhanghai.android.files.util.ParcelableListParceler
 import me.zhanghai.android.files.util.ParcelableState
@@ -110,12 +109,18 @@ class ImageViewerFragment : Fragment(), ConfirmDeleteDialogFragment.Listener {
             adapter = this@ImageViewerFragment.adapter
             // ViewPager saves its position and will restore it later.
             setCurrentItem(args.position, false)
-            setPageTransformer(DepthPageTransformer)
+            // No page transformer, so that adjacent images move contiguously with the finger.
             registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {
                     updateTitle()
                 }
             })
+            canCurrentPageScrollHorizontally = { direction ->
+                val holder = (getChildAt(0) as? RecyclerView)
+                    ?.findViewHolderForAdapterPosition(currentItem)
+                    as? ImageViewerAdapter.ViewHolder
+                holder?.canScrollHorizontally(direction) ?: false
+            }
         }
     }
 
@@ -180,9 +185,6 @@ class ImageViewerFragment : Fragment(), ConfirmDeleteDialogFragment.Listener {
             binding.viewPager.currentItem = paths.lastIndex
         }
         updateTitle()
-        // Work around blank screen due to ViewPager2.PageTransformer not being called (and thus the
-        // next item keeps its 0 alpha) when we have offscreenPageLimit = 1.
-        binding.viewPager.doOnPreDraw { binding.viewPager.requestTransform() }
     }
 
     private fun updateTitle() {

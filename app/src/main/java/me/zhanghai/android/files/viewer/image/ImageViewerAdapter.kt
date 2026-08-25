@@ -54,7 +54,12 @@ class ImageViewerAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val path = getItem(position)
         val binding = holder.binding
+        // Tapping anywhere toggles the system UI, including areas not covered by the image itself.
+        binding.root.setOnClickListener { listener(it) }
+        binding.progress.setOnClickListener(listener)
+        binding.errorText.setOnClickListener(listener)
         binding.image.setOnPhotoTapListener { view, _, _ -> listener(view) }
+        binding.image.setOutsidePhotoTapListener { view -> listener(view) }
         binding.largeImage.setOnClickListener(listener)
         loadImage(binding, path)
     }
@@ -65,6 +70,22 @@ class ImageViewerAdapter(
         val binding = holder.binding
         binding.image.dispose()
         binding.largeImage.recycle()
+    }
+
+    /**
+     * Returns whether the currently displayed image of this holder is zoomed in and can still pan
+     * itself by [direction] (-1 for left, 1 for right), so that paging should wait until its edge.
+     */
+    fun canScrollHorizontally(direction: Int): Boolean {
+        return when {
+            binding.image.isVisible ->
+                binding.image.scale > 1f && binding.image.canScrollHorizontally(direction)
+            binding.largeImage.isVisible ->
+                binding.largeImage.isImageLoaded && binding.largeImage.canScrollHorizontally(
+                    direction
+                )
+            else -> false
+        }
     }
 
     private fun loadImage(binding: ImageViewerItemBinding, path: Path) {

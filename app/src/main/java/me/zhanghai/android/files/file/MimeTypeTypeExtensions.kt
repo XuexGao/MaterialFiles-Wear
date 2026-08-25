@@ -43,6 +43,20 @@ private val supportedArchiveMimeTypes = mutableListOf(
 val MimeType.isImage: Boolean
     get() = icon == MimeTypeIcon.IMAGE
 
+val MimeType.isText: Boolean
+    get() = type == "text" || this in textMimeTypes
+
+private val textMimeTypes = listOf(
+    "application/ecmascript",
+    "application/javascript",
+    "application/json",
+    "application/typescript",
+    "application/x-sh",
+    "application/x-shellscript",
+    "application/xml",
+    "application/yaml"
+).map { it.asMimeType() }.toSet()
+
 val MimeType.isAudio: Boolean
     get() = icon == MimeTypeIcon.AUDIO
 
