@@ -5,9 +5,9 @@
 ## 项目简介
 
 - **上游**：[zhanghai/MaterialFiles](https://github.com/zhanghai/MaterialFiles) —— 开源 Material Design 文件管理器，GPLv3。
-- **本仓库**：`XuexGao/MaterialFiles-Wear`，上游的 fork。
+- **本仓库**：`XuexGao/MaterialFiles-Wear`，上游的 fork，当前版本 `2.0.0-rc1 (260825)`。
 - **定位**：一个 Android 文件管理器，后端基于 **Java NIO2 File API** 实现（非 `java.io.File`、非 `ls` 解析），通过 JNI 绑定 Linux syscall，支持软链、权限、SELinux 上下文；支持压缩包查看/解压/创建、FTP/SFTP/SMB/WebDAV、root、Shizuku。
-- **⚠️ 本 fork 的目标**：仓库名中的 "-Wear" 表明目标是 **Wear OS 移植**，但目前代码中**尚无任何 Wear 相关内容**（无 wear 模块、无圆形屏幕适配）。master 与上游一致。
+- **⚠️ 本 fork 的目标**：**Wear OS 方屏手表适配**。已落地：全局界面缩放（见下）、文本/图片直开内置查看器、图片查看器手势改进；README 与关于页已注明 fork 说明。
 
 ## 构建与环境要求
 
@@ -56,11 +56,22 @@ UI 技术栈：**View 体系 + ViewModel/LiveData**，ViewBinding 开启，**没
 
 ### 界面缩放（方屏手表适配）
 
-- 核心实现：`me.zhanghai.android.files.ui.UiScaleHelper`。在 `AppActivity.attachBaseContext()` 中用 `createConfigurationContext` 调低 `densityDpi`（默认 60%，见 `Settings.UI_SCALE`），全 app 的 dp/sp 尺寸随之等比缩小；对话框/弹窗随宿主 Activity 自动缩放。
+- 核心实现：`me.zhanghai.android.files.ui.UiScaleHelper`。在 `AppActivity.attachBaseContext()` 中用 `createConfigurationContext` 调低 `densityDpi`，全 app 的 dp/sp 尺寸随之等比缩小；对话框/弹窗随宿主 Activity 自动缩放。
+- **默认值**：`UiScalePreference.resolveDefaultScale()` 按屏幕最小边 dp ÷ 360dp（典型手机宽度）比例计算并吸附到 5% 步进（40–100%）；用户手动保存过的值优先（`currentEffectiveScale()` 读 `defaultSharedPreferences` 判断）。
+- 设置页「界面 → 界面缩放」是自定义 `UiScalePreference` + `UiScalePreferenceDialogFragment`（SeekBar 40–100%，重置=屏幕推荐值，保存时才持久化）。持久化后经 `Settings.UI_SCALE` observer 直接调 `UiScaleHelper.sync()` 重建所有 Activity 生效。
 - **新增 Activity 必须继承 `AppActivity`**，否则不会被缩放，且 `NightModeHelper` 会直接抛异常。
-- 设置页「界面 → 界面缩放」为 SeekBarPreference（40–100%）；改动经 500ms 防抖后调用 `UiScaleHelper.sync()` 重建所有 Activity 生效。
 - 刻意保留 `screenWidthDp/screenHeightDp/smallestScreenWidthDp` 为未缩放值，保证布局限定符选择行为不变。
 - Manifest 已声明 `<uses-feature android:name="android.hardware.type.watch" android:required="false" />`。
+
+### 文件打开与查看器
+
+- 点击文件的默认路径：`filelist/FileListFragment.openFileWithIntent()`。压缩包走 FileJobService；**文本与图片直接进内置查看器**（`TextEditorActivity` / `ImageViewerActivity`，通过 `setClass` 强制内部解析）；其他类型交给系统 VIEW intent（可能弹选择器）；「打开方式」菜单始终弹系统选择器。
+- 文本类型判定：`MimeType.isText`（`file/MimeTypeTypeExtensions.kt`）。
+- 图片查看器（`viewer/image/`）：ViewPager2 + PhotoView / SubsamplingScaleImageView。手势约定：
+  - 相邻图片随手指连续移动（无 PageTransformer 动画）；
+  - 点击任意位置（含图片外区域，经 `attacher.setOnOutsidePhotoTapListener`）切换标题栏显隐；
+  - 放大后滑动先平移图片，到边缘后松手再次滑动才翻页 —— 实现方式是 Adapter 里 `installPanInterceptor` 在图片仍有平移余量时对 parent 调 `requestDisallowInterceptTouchEvent(true)`；**ViewPager2 是 final 类不能继承**；
+  - PhotoView `minimumScale = 1f`，不允许缩小到初始全屏大小以下。
 
 ### 版本号与包名
 
@@ -78,6 +89,13 @@ UI 技术栈：**View 体系 + ViewModel/LiveData**，ViewBinding 开启，**没
 
 **升级依赖前必须读这些注释并验证约束仍然成立。**
 
+### WebDAV 栈（dav4jvm 4.0.0 / Ktor）
+
+- 已从 okhttp 版 dav4jvm fork 迁移到官方 **`com.github.bitfireAT:dav4jvm:4.0.0`**（Ktor 3.5 API），需自行声明 `io.ktor:ktor-client-auth` 与 `io.ktor:ktor-client-okhttp`（dav4jvm 里是 implementation 不导出）；保留 xpp3 排除、新增 guava 排除（用 app 的 android 变体）。
+- 关键差异：包名 `at.bitfire.dav4jvm.ktor.*`；操作是 suspend/Flow，经 `DavResourceCompat.runBlockingIo {}` 桥接回阻塞 NIO（中断→InterruptedIOException）；`HttpClient` 按 Authority 缓存于 `Client.clients`；认证用 `PreemptiveBasicDigestAuthProvider`+`DomainAuthProvider` 与自定义 Bearer provider（都装在 OkHttp 引擎上，复用全局 OkHttpClient/cookie/超时）。
+- 4.0.0 的具体异常构造器变 internal：NIO 映射靠 `DavException(msg, statusCode=…)` + `DavExceptionExtensions.kt` 的 statusCode 回退分支。
+- 自定义 PATCH / range-PUT 需要的 `checkStatus`/重定向循环在库里是 internal，已在 `DavResourceCompat.kt` 本地移植（`checkStatusCompat`/`followRedirectsCompat`）。
+
 ### 生成物与辅助脚本
 
 - `mime/` —— 从 shared-mime-info 生成的 MIME 扩展（`generate-code.sh`），不要手改生成文件。
@@ -87,6 +105,7 @@ UI 技术栈：**View 体系 + ViewModel/LiveData**，ViewBinding 开启，**没
 ## 其他注意
 
 - 上游 README 明确：此应用**不是 DocumentsUI 的替代品**，依赖 DocumentsUI 授权外置 SD 卡；不要往这个方向改。
-- 应用面向 Android 5.0+（现 minSdk 23），改动时注意 API 级别兼容性。
+- 应用面向 Android 6.0+（minSdk 23），改动时注意 API 级别兼容性。
 - 提交信息遵循上游风格：`类型: 描述`（如 `Fix: ...`、`Build: Update dependencies`、`Feat: ...`）。
 - Git 远程为 fork `origin = XuexGao/MaterialFiles-Wear`；同步上游时可添加 upstream remote。
+- CI 用 GitHub Actions（`.github/workflows/android.yml`，actions/checkout@v7、setup-java@v6、upload-artifact@v7），`gh workflow run android.yml --ref master` 手动触发，产物名 `app-debug.apk`。
