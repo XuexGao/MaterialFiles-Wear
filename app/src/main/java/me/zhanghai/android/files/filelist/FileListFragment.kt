@@ -1265,12 +1265,24 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         if (path.isArchivePath) {
             FileJobService.open(path, mimeType, withChooser, requireContext())
         } else {
-            if (!withChooser && mimeType.isText) {
-                // Open text files directly in our built-in text editor.
-                startActivitySafe(
-                    TextEditorActivity::class.createIntent().apply { extraPath = path }
-                )
-                return
+            if (!withChooser) {
+                // Open files that have a built-in viewer directly, without asking.
+                val viewerActivityClass = when {
+                    mimeType.isText -> TextEditorActivity::class
+                    mimeType.isImage -> ImageViewerActivity::class
+                    else -> null
+                }
+                if (viewerActivityClass != null) {
+                    val intent = path.fileProviderUri.createViewIntent(mimeType)
+                        .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                        .apply {
+                            extraPath = path
+                            maybeAddImageViewerActivityExtras(this, path, mimeType)
+                        }
+                        .setClass(requireContext(), viewerActivityClass.java)
+                    startActivitySafe(intent)
+                    return
+                }
             }
             val intent = path.fileProviderUri.createViewIntent(mimeType)
                 .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)

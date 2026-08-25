@@ -8,6 +8,16 @@
 
 [在 Transifex 上帮助翻译](https://www.transifex.com/zhanghai/MaterialFiles/)（[搜索 Android 和 GNOME 的翻译](https://translations.zhanghai.me/)、[微软语言资源](https://learn.microsoft.com/en-us/globalization/reference/microsoft-language-resources)、[MIME 类型翻译](https://gitlab.freedesktop.org/xdg/shared-mime-info/-/tree/master/po)）
 
+## 关于本 fork
+
+本仓库是 Material Files 的 fork，针对**方屏 Wear OS 手表及其他小屏幕设备**做了适配：
+
+- **全局界面缩放** —— 默认值根据屏幕尺寸与像素密度自动计算；随时可在「设置 → 界面 → 界面缩放」手动调节（40%–100%，保留用户更改）。
+- **支持的文件直接打开** —— 文本文件直接进内置编辑器，图片直接进内置查看器，不再弹出选择器。
+- **图片查看器改进** —— 左右滑动时相邻图片无缝衔接移动；点击任意位置显示/隐藏标题栏；放大后滑动先平移图片、到达边缘后才切换下一张；缩小限制为初始全屏大小。
+- **依赖更新** —— WebDAV 库升级至 dav4jvm 4.0.0，Kotlin/AndroidX 工具链同步刷新。
+- 需要 Android 6.0+（minSdk 23）。
+
 ## 预览
 
 <p><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="32%" /> <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="32%" /> <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="32%" />

@@ -143,6 +143,8 @@ class ImageViewerAdapter(
         if (!imageInfo.shouldUseLargeImageView) {
             binding.image.apply {
                 isVisible = true
+                // Don't allow zooming out below the fitted, full-image size.
+                minimumScale = 1f
                 load(path to imageInfo.attributes) {
                     size(Size.ORIGINAL)
                     fadeIn(context.shortAnimTime)

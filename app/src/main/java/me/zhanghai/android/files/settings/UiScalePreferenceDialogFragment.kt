@@ -64,11 +64,12 @@ class UiScalePreferenceDialogFragment : MaterialPreferenceDialogFragmentCompat()
 
         seekBar = view.findViewById(R.id.ui_scale_seek_bar)
         valueText = view.findViewById(R.id.ui_scale_value_text)
-        seekBar.max = (SCALE_MAX - SCALE_MIN) / SCALE_STEP
+        seekBar.max = (UiScalePreference.SCALE_MAX - UiScalePreference.SCALE_MIN) / UiScalePreference.SCALE_STEP
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
-                    scale = (SCALE_MIN + progress * SCALE_STEP).coerceIn(SCALE_MIN, SCALE_MAX)
+                    scale = (UiScalePreference.SCALE_MIN + progress * UiScalePreference.SCALE_STEP)
+                        .coerceIn(UiScalePreference.SCALE_MIN, UiScalePreference.SCALE_MAX)
                     updateViews()
                 }
             }
@@ -87,14 +88,8 @@ class UiScalePreferenceDialogFragment : MaterialPreferenceDialogFragmentCompat()
     }
 
     private fun updateViews() {
-        seekBar.progress = (scale - SCALE_MIN) / SCALE_STEP
+        seekBar.progress = (scale - UiScalePreference.SCALE_MIN) / UiScalePreference.SCALE_STEP
         valueText.text = requireContext().getString(R.string.settings_ui_scale_value_format, scale)
-    }
-
-    companion object {
-        private const val SCALE_MIN = 40
-        private const val SCALE_MAX = 100
-        private const val SCALE_STEP = 5
     }
 
     @Parcelize

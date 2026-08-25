@@ -792,6 +792,7 @@
     <string name="settings_read_remote_files_for_thumbnail_title">Read remote files for thumbnail</string>
 
     <string name="about_title">About</string>
+    <string name="about_fork_description">A Material Files fork adapted for square watch screens: global UI scaling, built-in text editor and image viewer optimized for small displays.</string>
     <string name="about_version_title">Version</string>
     <string name="about_github_title">View on GitHub</string>
     <string name="about_licenses_title">Licenses</string>

@@ -638,6 +638,7 @@
     <string name="settings_read_remote_files_for_thumbnail_title">读取远程文件以显示缩略图</string>
 
     <string name="about_title">关于</string>
+    <string name="about_fork_description">Material Files 的方屏手表适配版：全局界面缩放，内置文本编辑器与图片查看器针对小屏幕优化。</string>
     <string name="about_version_title">版本</string>
     <string name="about_github_title">在 GitHub 上查看</string>
     <string name="about_licenses_title">许可证</string>

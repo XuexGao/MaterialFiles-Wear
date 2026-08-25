@@ -83,6 +83,14 @@
                                 android:textAppearance="@style/TextAppearance.AppCompat.Headline" />
                         </LinearLayout>
 
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="?android:listPreferredItemPaddingStart"
+                            android:paddingEnd="?android:listPreferredItemPaddingEnd"
+                            android:text="@string/about_fork_description"
+                            android:textAppearance="@style/TextAppearance.AppCompat.Caption" />
+
                         <me.zhanghai.android.foregroundcompat.ForegroundLinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"

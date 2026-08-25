@@ -12,9 +12,8 @@ import android.content.res.Configuration
 import android.os.Bundle
 import java.util.WeakHashMap
 import me.zhanghai.android.files.compat.recreateCompat
-import me.zhanghai.android.files.settings.Settings
+import me.zhanghai.android.files.settings.UiScalePreference
 import me.zhanghai.android.files.util.SimpleActivityLifecycleCallbacks
-import me.zhanghai.android.files.util.valueCompat
 import kotlin.math.roundToInt
 
 /**
@@ -72,5 +71,5 @@ object UiScaleHelper {
     }
 
     private val currentScale: Float
-        get() = Settings.UI_SCALE.valueCompat / 100f
+        get() = UiScalePreference.currentEffectiveScale() / 100f
 }

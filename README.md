@@ -10,6 +10,17 @@ An open source Material Design file manager, for Android 5.0+.
 
 [Help translation on Transifex](https://www.transifex.com/zhanghai/MaterialFiles/) ([Search Android & GNOME translations](https://translations.zhanghai.me/), [Microsoft language resources](https://learn.microsoft.com/en-us/globalization/reference/microsoft-language-resources), [MIME type translations](https://gitlab.freedesktop.org/xdg/shared-mime-info/-/tree/master/po))
 
+## About this fork
+
+This repository is a fork of Material Files adapted for **square-screen Wear OS watches and other small displays**:
+
+- **Global UI scaling** — the default is computed from your screen size and pixel density; adjust it any time in *Settings → Interface → UI scale* (40%–100%, your changes are kept).
+- **Direct opening for supported files** — text files open in the built-in editor and images in the built-in viewer, no app chooser.
+- **Improved image viewer** — adjacent images move contiguously while swiping, tapping anywhere toggles the title bar, zoomed-in swiping pans until the edge before switching pages, and zooming out is limited to the fitted size.
+- **Updated dependencies** — WebDAV stack (dav4jvm 4.0.0), Kotlin/AndroidX toolchain refresh.
+- Requires Android 6.0+ (minSdk 23).
+
+
 ## Preview
 
 <p><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="32%" /> <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="32%" /> <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="32%" />
