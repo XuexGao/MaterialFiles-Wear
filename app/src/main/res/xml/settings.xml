@@ -54,15 +54,13 @@
             android:entryValues="@array/pref_entry_values_file_name_ellipsize"
             app:useSimpleSummaryProvider="true" />
 
-        <androidx.preference.SeekBarPreference
+        <me.zhanghai.android.files.settings.UiScalePreference
             android:key="@string/pref_key_ui_scale"
             android:title="@string/settings_ui_scale_title"
             android:summary="@string/settings_ui_scale_summary"
             android:defaultValue="@integer/pref_default_value_ui_scale"
-            android:max="100"
-            app:min="40"
-            app:seekBarIncrement="5"
-            app:showSeekBarValue="true" />
+            android:positiveButtonText="@string/save"
+            android:negativeButtonText="@android:string/cancel" />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/settings_behavior_title">

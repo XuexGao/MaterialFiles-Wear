@@ -7,11 +7,9 @@ package me.zhanghai.android.files.settings
 
 import android.os.Build
 import android.os.Bundle
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import androidx.preference.Preference
 import me.zhanghai.android.files.R
+import me.zhanghai.android.files.app.application
 import me.zhanghai.android.files.theme.custom.CustomThemeHelper
 import me.zhanghai.android.files.theme.custom.ThemeColor
 import me.zhanghai.android.files.theme.night.NightMode
@@ -21,8 +19,6 @@ import me.zhanghai.android.files.ui.UiScaleHelper
 
 class SettingsPreferenceFragment : PreferenceFragmentCompat() {
     private lateinit var localePreference: LocalePreference
-
-    private var uiScaleApplyJob: Job? = null
 
     override fun onCreatePreferencesFix(savedInstanceState: Bundle?, rootKey: String?) {
         addPreferencesFromResource(R.xml.settings)
@@ -34,6 +30,12 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
                 activity.setApplicationLocalesPre33(locales)
             }
         }
+        val uiScalePreference =
+            preferenceScreen.findPreference<UiScalePreference>(getString(R.string.pref_key_ui_scale))!!
+        uiScalePreference.summaryProvider =
+            Preference.SummaryProvider<UiScalePreference> { preference ->
+                application.getString(R.string.settings_ui_scale_value_format, preference.scale)
+            }
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -73,13 +75,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
     }
 
     private fun onUiScaleChanged(uiScale: Int) {
-        // SeekBarPreference persists continuously while the user is dragging, so wait for a pause
-        // before recreating all activities with the new scale.
-        uiScaleApplyJob?.cancel()
-        uiScaleApplyJob = viewLifecycleOwner.lifecycleScope.launch {
-            delay(UI_SCALE_APPLY_DELAY_MILLIS)
-            UiScaleHelper.sync()
-        }
+        UiScaleHelper.sync()
     }
 
     override fun onResume() {
@@ -90,9 +86,5 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
             // between system default and the locale that's the current system default.
             localePreference.notifyChanged()
         }
-    }
-
-    companion object {
-        private const val UI_SCALE_APPLY_DELAY_MILLIS = 500L
     }
 }

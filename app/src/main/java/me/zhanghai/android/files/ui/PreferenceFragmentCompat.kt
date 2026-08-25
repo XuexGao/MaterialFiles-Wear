@@ -10,6 +10,8 @@ import android.view.View
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import com.takisoft.preferencex.PreferenceFragmentCompat as TakisoftPreferenceFragmentCompat
+import me.zhanghai.android.files.settings.UiScalePreference
+import me.zhanghai.android.files.settings.UiScalePreferenceDialogFragment
 
 abstract class PreferenceFragmentCompat : TakisoftPreferenceFragmentCompat() {
     // @see https://github.com/Gericop/Android-Support-Preference-V7-Fix/issues/201
@@ -23,12 +25,21 @@ abstract class PreferenceFragmentCompat : TakisoftPreferenceFragmentCompat() {
     }
 
     override fun onDisplayPreferenceDialog(preference: Preference) {
-        if (parentFragmentManager.findFragmentByTag(DIALOG_FRAGMENT_TAG) == null
-            && preference is ListPreference) {
-            displayPreferenceDialog(MaterialListPreferenceDialogFragmentCompat(), preference.key)
-        } else {
-            super.onDisplayPreferenceDialog(preference)
+        if (parentFragmentManager.findFragmentByTag(DIALOG_FRAGMENT_TAG) == null) {
+            when (preference) {
+                is ListPreference -> {
+                    displayPreferenceDialog(
+                        MaterialListPreferenceDialogFragmentCompat(), preference.key
+                    )
+                    return
+                }
+                is UiScalePreference -> {
+                    displayPreferenceDialog(UiScalePreferenceDialogFragment(), preference.key)
+                    return
+                }
+            }
         }
+        super.onDisplayPreferenceDialog(preference)
     }
 
     companion object {
