@@ -9,8 +9,10 @@ import at.bitfire.dav4jvm.QuotedStringUtils
 import at.bitfire.dav4jvm.ktor.DavResource
 import at.bitfire.dav4jvm.ktor.exception.DavException
 import at.bitfire.dav4jvm.ktor.exception.HttpException
+import at.bitfire.dav4jvm.ktor.resolve
 import io.ktor.client.HttpClient
 import io.ktor.client.request.header
+import io.ktor.client.request.headers
 import io.ktor.client.request.preparePut
 import io.ktor.client.request.prepareRequest
 import io.ktor.client.request.setBody
