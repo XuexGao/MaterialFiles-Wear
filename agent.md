@@ -37,6 +37,7 @@
 - `provider/` —— **核心**：各文件系统的 NIO2 FileSystemProvider 实现
   - `linux/`（syscall 直连本地文件系统）、`archive/`、`document/`(SAF)、`content/`、`ftp/`、`sftp/`、`smb/`、`webdav/`、`root/`、`remote/`、`common/`
 - `file/` —— 共享抽象：FileItem、MimeType、各类 Uri 封装等
+- `navigation/` —— 抽屉导航：分区依次为 存储空间 → **工具**（含 FTP 服务器入口）→ 标准文件夹 → 书签文件夹 → 菜单；分区用 null 分隔、标题用 `NavigationTitleItem` + `NavigationTitleItemBinding`
 - `filelist/` / `filejob/` / `fileaction/` —— 文件列表 UI、后台作业（复制/移动/压缩等）、操作逻辑
 - `ui/` / `navigation/` / `viewer/` —— 通用 UI、面包屑导航、文本/图片查看器
 - `storage/` —— 存储位置管理（文档树、外部存储、各类服务器书签的编辑/列表）
@@ -71,7 +72,8 @@ UI 技术栈：**View 体系 + ViewModel/LiveData**，ViewBinding 开启，**没
   - 相邻图片随手指连续移动（无 PageTransformer 动画）；
   - 点击任意位置（含图片外区域，经 `attacher.setOnOutsidePhotoTapListener`）切换标题栏显隐；
   - 放大后滑动先平移图片，到边缘后松手再次滑动才翻页 —— 实现方式是 Adapter 里 `installPanInterceptor` 在图片仍有平移余量时对 parent 调 `requestDisallowInterceptTouchEvent(true)`；**ViewPager2 是 final 类不能继承**；
-  - PhotoView `minimumScale = 1f`，不允许缩小到初始全屏大小以下。
+  - PhotoView `minimumScale = 1f`，不允许缩小到初始全屏大小以下；双击后上下拖动为连续快速缩放（经 `attacher.setOnDoubleTapListener` 自实现，与 SSV quick scale 手感一致），单击切换标题栏。
+  - ⚠️ ktor URL 的绝对路径以**前导空段**标记（`Url("/a").rawSegments == ["", "a"]`）；WebDavPath.url 必须补该空段，否则 dav4jvm 的成员关系逐段比较会把子目录内容全部判为无关项（表现为根目录可见、进去全空）。
 
 ### 版本号与包名
 
