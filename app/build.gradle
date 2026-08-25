@@ -107,10 +107,13 @@ repositories {
     }
 }
 dependencies {
-    // JitPack no longer serves builds of arbitrary commits of this project, so use release 4.0.0,
-    // which contains https://github.com/bitfireAT/dav4jvm/commit/c1bc14348831bcdb00f3a6eec4859b81c7dc3728 .
-    // Don't upgrade to 4.0.1+: it removed at.bitfire.dav4jvm.exception entirely.
-    implementation('com.github.bitfireAT:dav4jvm:4.0.0') {
+    // JitPack no longer serves builds of arbitrary commits of the upstream project, and all of its
+    // current release tags use a rewritten Ktor-based API that our WebDAV provider doesn't target.
+    // So we depend on our own pinned fork instead, built by JitPack from
+    // https://github.com/XuexGao/dav4jvm (bitfireAT/dav4jvm @ 02fe1a95e6, which contains
+    // https://github.com/bitfireAT/dav4jvm/commit/c1bc14348831bcdb00f3a6eec4859b81c7dc3728 ,
+    // plus a jitpack.yml for JDK 17).
+    implementation('com.github.XuexGao:dav4jvm:7e09aaaf6d') {
         exclude group: 'org.ogce', module: 'xpp3'
     }
     implementation 'com.github.chrisbanes:PhotoView:2.3.0'

@@ -10,7 +10,7 @@ import android.app.Application
 import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
-import android.util.WeakHashMap
+import java.util.WeakHashMap
 import me.zhanghai.android.files.compat.recreateCompat
 import me.zhanghai.android.files.settings.Settings
 import me.zhanghai.android.files.util.SimpleActivityLifecycleCallbacks

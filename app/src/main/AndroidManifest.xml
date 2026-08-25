@@ -12,6 +12,8 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.wifi" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
+    <!-- Allow installation on watch devices; the UI is scaled down for their small screens. -->
+    <uses-feature android:name="android.hardware.type.watch" android:required="false" />
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
