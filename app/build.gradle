@@ -40,6 +40,8 @@ android {
         buildConfigField 'String', 'FILE_PROVIDIER_AUTHORITY', 'APPLICATION_ID + ".file_provider"'
         resValue 'string', 'app_provider_authority', applicationId + '.app_provider'
         resValue 'string', 'file_provider_authority', applicationId + '.file_provider'
+        // Trim locale resources to the languages this fork maintains.
+        resourceConfigurations += ['en', 'zh-rCN', 'zh-rTW']
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=none'

@@ -55,3 +55,11 @@
 
 # SMBJ-RPC
 -dontwarn java.rmi.UnmarshalException
+
+# Ktor loads engines, plugins and auth providers reflectively.
+-keep class io.ktor.** { *; }
+-dontwarn io.ktor.**
+-dontwarn org.slf4j.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.jsse.**
+-dontwarn org.openjsse.**

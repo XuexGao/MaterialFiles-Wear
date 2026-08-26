@@ -21,10 +21,10 @@ jobs:
         java-version: '21'
         cache: 'gradle'
     - name: Build with Gradle
-      run: ./gradlew assembleDebug lintVitalRelease
+      run: ./gradlew assembleRelease lintVitalRelease
     - name: Upload artifact
       uses: actions/upload-artifact@v7
       with:
-        name: app-debug.apk
-        path: app/build/outputs/apk/debug/app-debug.apk
-        retention-days: 10
+        name: app-release.apk
+        path: app/build/outputs/apk/release/app-release.apk
+        retention-days: 30

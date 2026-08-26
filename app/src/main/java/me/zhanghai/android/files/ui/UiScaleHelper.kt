@@ -35,7 +35,12 @@ object UiScaleHelper {
      */
     private val activityScales = WeakHashMap<Activity, Float>()
 
+    /** The unwrapped device density, captured before any scaling is applied to any context. */
+    private var deviceDensityDpi = 0
+
     fun initialize(application: Application) {
+        // The application context is never wrapped, so its density is the device default.
+        deviceDensityDpi = application.resources.displayMetrics.densityDpi
         application.registerActivityLifecycleCallbacks(object : SimpleActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
                 // The scale has already been applied in AppActivity.attachBaseContext(), record it
@@ -49,14 +54,19 @@ object UiScaleHelper {
         })
     }
 
+    /**
+     * Wraps [base] with the current UI scale. Idempotent: the target density is always computed
+     * from the captured device density rather than the passed context's (possibly already
+     * wrapped) one, so that dialogs can safely re-wrap an activity context.
+     */
     fun wrapContext(base: Context): Context {
         val scale = currentScale
-        if (scale == 1f) {
+        if (scale == 1f || deviceDensityDpi == 0) {
             return base
         }
         val configuration = Configuration(base.resources.configuration)
-        val densityDpi = base.resources.displayMetrics.densityDpi
-        configuration.densityDpi = (densityDpi * scale).roundToInt().coerceIn(1, densityDpi)
+        val densityDpi = (deviceDensityDpi * scale).roundToInt().coerceIn(1, deviceDensityDpi)
+        configuration.densityDpi = densityDpi
         return base.createConfigurationContext(configuration)
     }
 

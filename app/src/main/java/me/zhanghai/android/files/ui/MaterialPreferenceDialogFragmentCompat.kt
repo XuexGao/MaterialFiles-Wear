@@ -87,7 +87,9 @@ abstract class MaterialPreferenceDialogFragmentCompat : AppCompatDialogFragment(
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         whichButtonClicked = DialogInterface.BUTTON_NEGATIVE
-        val dialog = MaterialAlertDialogBuilder(requireContext(), theme)
+        // Re-apply the UI scale explicitly: some devices render preference dialogs from contexts
+        // whose wrapped density got lost along the fragment/dialog chain.
+        val dialog = MaterialAlertDialogBuilder(UiScaleHelper.wrapContext(requireContext()), theme)
             .setTitle(dialogTitle)
             .setIcon(dialogIcon)
             .setPositiveButton(positiveButtonText, this)
