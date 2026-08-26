@@ -6,9 +6,11 @@
 package me.zhanghai.android.files.viewer.image
 
 import android.graphics.BitmapFactory
+import android.os.SystemClock
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.lifecycle.LifecycleOwner
@@ -28,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.zhanghai.android.files.coil.fadeIn
 import me.zhanghai.android.files.databinding.ImageViewerItemBinding
+import kotlin.math.hypot
 import me.zhanghai.android.files.file.MimeType
 import me.zhanghai.android.files.file.asMimeType
 import me.zhanghai.android.files.file.asMimeTypeOrNull
@@ -63,11 +66,12 @@ class ImageViewerAdapter(
         binding.errorText.setOnClickListener(listener)
         // Double tapping and dragging up/down adjusts the zoom continuously, matching the quick
         // scale gesture of SubsamplingScaleImageView.
-        binding.image.installQuickScaleAndTap(listener)
+        binding.image.installImageGestures(listener) {
+            binding.image.canScrollHorizontally(it)
+        }
         binding.largeImage.setOnClickListener(listener)
-        // While the image is zoomed in, horizontal swipes pan it; pages are only switched once its
-        // edge has been reached.
-        binding.image.installPanInterceptor { binding.image.canScrollHorizontally(it) }
+        // While the large image is zoomed in, horizontal swipes pan it; pages are only switched
+        // once its edge has been reached.
         binding.largeImage.installPanInterceptor { binding.largeImage.canScrollHorizontally(it) }
         loadImage(binding, path)
     }
@@ -80,54 +84,73 @@ class ImageViewerAdapter(
         binding.largeImage.recycle()
     }
 
-    private fun PhotoView.installQuickScaleAndTap(listener: (View) -> Unit) {
-        val photoView = this
-        var baseScale = 0f
+    /**
+     * Handles all gestures of a PhotoView image: single taps toggle the system UI through
+     * [onTap], double tapping and dragging up/down quickly scales the image like
+     * SubsamplingScaleImageView does, and while the image can still pan itself horizontally the
+     * pager is asked not to intercept so that pages are only switched at its edges.
+     *
+     * Quick scaling is detected manually instead of through the attacher's own double tap
+     * listener so that the drag part is guaranteed to be consumed here and cannot fight the
+     * attacher's built in fixed-zoom toggle.
+     */
+    private fun PhotoView.installImageGestures(
+        onTap: (View) -> Unit,
+        canPan: (direction: Int) -> Boolean
+    ) {
+        val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+        var lastX = 0f
+        var disallowed = false
+        var lastUpTime = 0L
+        var lastUpX = 0f
+        var lastUpY = 0f
+        var baseScale = 1f
         var anchorX = 0f
         var anchorY = 0f
         var quickScaling = false
-        photoView.attacher?.setOnDoubleTapListener(object : GestureDetector.OnDoubleTapListener {
+
+        // Replace the default double tap listener so that the attacher doesn't animate its own
+        // fixed zoom level on top of our continuous scaling.
+        attacher.setOnDoubleTapListener(object : GestureDetector.OnDoubleTapListener {
             override fun onSingleTapConfirmed(motionEvent: MotionEvent): Boolean {
-                listener(photoView)
+                onTap(this@installImageGestures)
                 return true
             }
 
-            override fun onDoubleTap(motionEvent: MotionEvent): Boolean {
-                baseScale = photoView.scale
-                anchorX = motionEvent.x
-                anchorY = motionEvent.y
-                quickScaling = true
-                return true
-            }
+            override fun onDoubleTap(motionEvent: MotionEvent): Boolean = true
 
-            override fun onDoubleTapEvent(motionEvent: MotionEvent): Boolean {
-                when (motionEvent.actionMasked) {
-                    MotionEvent.ACTION_MOVE -> if (quickScaling) {
-                        // Dragging up zooms in and dragging down zooms out; dragging by half the
-                        // view height doubles the zoom.
-                        val progress = (anchorY - motionEvent.y) / (photoView.height * 0.5f)
-                        val targetScale = baseScale * (1f + progress).coerceIn(
-                            photoView.minimumScale, photoView.maximumScale
-                        )
-                        photoView.attacher.setScale(targetScale, anchorX, anchorY, false)
-                    }
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> quickScaling = false
-                }
-                return true
-            }
+            override fun onDoubleTapEvent(motionEvent: MotionEvent): Boolean = true
         })
-    }
 
-    private fun View.installPanInterceptor(canPan: (direction: Int) -> Boolean) {
-        var lastX = 0f
-        var disallowed = false
         setOnTouchListener { view, motionEvent ->
             when (motionEvent.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     lastX = motionEvent.x
                     disallowed = false
+                    if (!quickScaling &&
+                        SystemClock.uptimeMillis() - lastUpTime <=
+                        ViewConfiguration.getDoubleTapTimeout() &&
+                        hypot(
+                            motionEvent.x - lastUpX,
+                            motionEvent.y - lastUpY
+                        ) <= touchSlop * 2
+                    ) {
+                        // Second tap of a double tap: start quick scaling from this point.
+                        quickScaling = true
+                        baseScale = scale
+                        anchorX = motionEvent.x
+                        anchorY = motionEvent.y
+                        view.parent?.requestDisallowInterceptTouchEvent(true)
+                    }
                 }
-                MotionEvent.ACTION_MOVE -> {
+                MotionEvent.ACTION_MOVE -> if (quickScaling) {
+                    // Dragging up zooms in and dragging down zooms out; dragging by half the view
+                    // height doubles the zoom.
+                    val progress = (anchorY - motionEvent.y) / (height * 0.5f)
+                    val targetScale =
+                        baseScale * (1f + progress).coerceIn(minimumScale, maximumScale)
+                    attacher.setScale(targetScale, anchorX, anchorY, false)
+                } else {
                     // Finger moved right means the image should pan right, revealing its left side.
                     val direction = if (motionEvent.x > lastX) -1 else 1
                     lastX = motionEvent.x
@@ -136,15 +159,29 @@ class ImageViewerAdapter(
                         view.parent?.requestDisallowInterceptTouchEvent(true)
                     }
                 }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                MotionEvent.ACTION_UP -> {
+                    lastUpTime = SystemClock.uptimeMillis()
+                    lastUpX = motionEvent.x
+                    lastUpY = motionEvent.y
+                    if (disallowed) {
+                        view.parent?.requestDisallowInterceptTouchEvent(false)
+                    }
+                    disallowed = false
+                }
+                MotionEvent.ACTION_CANCEL -> {
                     if (disallowed) {
                         view.parent?.requestDisallowInterceptTouchEvent(false)
                     }
                     disallowed = false
                 }
             }
-            // Never consume the event so that the view keeps handling gestures itself.
-            false
+            // Consume only the events that drive quick scaling so that the attacher keeps handling
+            // everything else itself.
+            quickScaling && (
+                motionEvent.actionMasked == MotionEvent.ACTION_MOVE ||
+                    motionEvent.actionMasked == MotionEvent.ACTION_UP ||
+                    motionEvent.actionMasked == MotionEvent.ACTION_CANCEL
+                )
         }
     }
 

@@ -31,6 +31,7 @@ import me.zhanghai.android.files.provider.smb.client.Client as SmbClient
 import me.zhanghai.android.files.provider.webdav.client.Client as WebDavClient
 
 val appInitializers = listOf(
+    ::initializeCrashLogger,
     ::initializeCrashlytics,
     ::disableHiddenApiChecks,
     ::initializeWebViewDebugging,
@@ -43,6 +44,10 @@ val appInitializers = listOf(
     ::initializeUiScale,
     ::createNotificationChannels
 )
+
+private fun initializeCrashLogger() {
+    CrashLogger.initialize(application)
+}
 
 private fun initializeCrashlytics() {
 //#ifdef NONFREE

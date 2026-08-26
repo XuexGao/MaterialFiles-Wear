@@ -60,6 +60,7 @@ UI 技术栈：**View 体系 + ViewModel/LiveData**，ViewBinding 开启，**没
 - 核心实现：`me.zhanghai.android.files.ui.UiScaleHelper`。在 `AppActivity.attachBaseContext()` 中用 `createConfigurationContext` 调低 `densityDpi`，全 app 的 dp/sp 尺寸随之等比缩小；对话框/弹窗随宿主 Activity 自动缩放。
 - **默认值**：`UiScalePreference.resolveDefaultScale()` 按屏幕最小边 dp ÷ 360dp（典型手机宽度）比例计算并吸附到 5% 步进（40–100%）；用户手动保存过的值优先（`currentEffectiveScale()` 读 `defaultSharedPreferences` 判断）。
 - 设置页「界面 → 界面缩放」是自定义 `UiScalePreference` + `UiScalePreferenceDialogFragment`（SeekBar 40–100%，重置=屏幕推荐值，保存时才持久化）。持久化后经 `Settings.UI_SCALE` observer 直接调 `UiScaleHelper.sync()` 重建所有 Activity 生效。
+- Debug 构建默认启用 `app/CrashLogger`：未捕获异常写入 `Android/data/<applicationId>/cache/logs/crash_*.txt`（保留最新 5 个），用于无 adb 设备（如手表）排查闪退。
 - **新增 Activity 必须继承 `AppActivity`**，否则不会被缩放，且 `NightModeHelper` 会直接抛异常。
 - 刻意保留 `screenWidthDp/screenHeightDp/smallestScreenWidthDp` 为未缩放值，保证布局限定符选择行为不变。
 - Manifest 已声明 `<uses-feature android:name="android.hardware.type.watch" android:required="false" />`。
@@ -78,7 +79,7 @@ UI 技术栈：**View 体系 + ViewModel/LiveData**，ViewBinding 开启，**没
 ### 版本号与包名
 
 - 版本在 `app/build.gradle` 的 `versionCode` / `versionName`。
-- 包名 `me.zhanghai.android.files`，同时用于 `applicationId` 和多个 provider authority（`resValue` 处自动派生）。若做 fork 改名，必须同步这些 authority。
+- `applicationId` 为 **`com.xuexgao.android.files`**（fork 改名），provider authority 由 `resValue` 从 applicationId 自动派生；**Kotlin/Java 代码包名仍是 `me.zhanghai.android.files`**（上游类名未改，AppUpgraders 里的序列化类名字符串依赖它，勿动）。
 
 ### 依赖的“坑”（改版本前先读注释）
 

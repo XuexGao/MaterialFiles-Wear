@@ -49,7 +49,6 @@ val navigationItems: List<NavigationItem?>
             }
             add(AddStorageItem())
             add(null)
-            add(NavigationTitleItem(R.string.navigation_tools))
             add(
                 IntentMenuItem(
                     R.drawable.shared_directory_icon_white_24dp, R.string.navigation_ftp_server,
@@ -359,21 +358,6 @@ private class BookmarkDirectoryItem(
         )
         return true
     }
-}
-
-internal class NavigationTitleItem(
-    @StringRes private val titleRes: Int
-) : NavigationItem() {
-    override val id: Long
-        get() = titleRes.toLong()
-
-    override val iconRes: Int?
-        @DrawableRes
-        get() = null
-
-    override fun getTitle(context: Context): String = context.getString(titleRes)
-
-    override fun onClick(listener: Listener) {}
 }
 
 private val menuItems: List<NavigationItem>

@@ -28,7 +28,6 @@ import me.zhanghai.android.files.compat.obtainStyledAttributesCompat
 import me.zhanghai.android.files.compat.setTextAppearanceCompat
 import me.zhanghai.android.files.compat.use
 import me.zhanghai.android.files.databinding.NavigationDividerItemBinding
-import me.zhanghai.android.files.databinding.NavigationTitleItemBinding
 import me.zhanghai.android.files.databinding.NavigationItemBinding
 import me.zhanghai.android.files.ui.AutoMirrorDrawable
 import me.zhanghai.android.files.ui.SimpleAdapter
@@ -156,11 +155,7 @@ class NavigationListAdapter(
         getItem(position)?.id ?: list.subList(0, position).count { it == null }.toLong()
 
     override fun getItemViewType(position: Int): Int {
-        val viewType = when (getItem(position)) {
-            null -> ViewType.DIVIDER
-            is NavigationTitleItem -> ViewType.TITLE
-            else -> ViewType.ITEM
-        }
+        val viewType = if (getItem(position) != null) ViewType.ITEM else ViewType.DIVIDER
         return viewType.ordinal
     }
 
@@ -202,14 +197,6 @@ class NavigationListAdapter(
                     )
                     binding.subtitleText.setTextColor(viewAttributes.itemSubtitleTextColor)
                 }
-            ViewType.TITLE ->
-                TitleHolder(
-                    NavigationTitleItemBinding.inflate(parent.context.layoutInflater, parent, false)
-                ).apply {
-                    binding.titleText.updatePaddingRelative(
-                        start = viewAttributes.dividerInsetStart
-                    )
-                }
             ViewType.DIVIDER ->
                 DividerHolder(
                     NavigationDividerItemBinding.inflate(
@@ -249,11 +236,6 @@ class NavigationListAdapter(
                 binding.titleText.text = item.getTitle(binding.titleText.context)
                 binding.subtitleText.text = item.getSubtitle(binding.subtitleText.context)
             }
-            ViewType.TITLE -> {
-                val titleItem = getItem(position) as NavigationTitleItem
-                val binding = (holder as TitleHolder).binding
-                binding.titleText.text = titleItem.getTitle(binding.titleText.context)
-            }
             ViewType.DIVIDER -> {}
         }
     }
@@ -282,16 +264,12 @@ class NavigationListAdapter(
 
     private enum class ViewType {
         ITEM,
-        TITLE,
         DIVIDER
     }
 
     private class ItemHolder(val binding: NavigationItemBinding) : RecyclerView.ViewHolder(
         binding.root
     )
-
-    private class TitleHolder(val binding: NavigationTitleItemBinding) :
-        RecyclerView.ViewHolder(binding.root)
 
     private class DividerHolder(
         val binding: NavigationDividerItemBinding
