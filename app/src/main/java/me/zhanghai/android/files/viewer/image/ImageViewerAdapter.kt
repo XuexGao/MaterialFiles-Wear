@@ -185,6 +185,40 @@ class ImageViewerAdapter(
         }
     }
 
+    /**
+     * While the view can still pan itself horizontally, ask the pager not to intercept so that
+     * pages are only switched once its edge has been reached.
+     */
+    private fun View.installPanInterceptor(canPan: (direction: Int) -> Boolean) {
+        var lastX = 0f
+        var disallowed = false
+        setOnTouchListener { view, motionEvent ->
+            when (motionEvent.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    lastX = motionEvent.x
+                    disallowed = false
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    // Finger moved right means the image should pan right, revealing its left side.
+                    val direction = if (motionEvent.x > lastX) -1 else 1
+                    lastX = motionEvent.x
+                    if (!disallowed && canPan(direction)) {
+                        disallowed = true
+                        view.parent?.requestDisallowInterceptTouchEvent(true)
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (disallowed) {
+                        view.parent?.requestDisallowInterceptTouchEvent(false)
+                    }
+                    disallowed = false
+                }
+            }
+            // Never consume the event so that the view keeps handling gestures itself.
+            false
+        }
+    }
+
     private fun loadImage(binding: ImageViewerItemBinding, path: Path) {
         binding.progress.fadeInUnsafe(true)
         binding.errorText.fadeOutUnsafe()
