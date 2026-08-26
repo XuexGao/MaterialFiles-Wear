@@ -61,7 +61,9 @@ private fun disableHiddenApiChecks() {
 
 private fun initializeWebViewDebugging() {
     if (BuildConfig.DEBUG) {
-        WebView.setWebContentsDebuggingEnabled(true)
+        // Devices like kids' watches may ship without any WebView provider; touching any WebView
+        // API then throws MissingWebViewPackageException before the app even starts.
+        runCatching { WebView.setWebContentsDebuggingEnabled(true) }
     }
 }
 
