@@ -611,6 +611,9 @@
         <item>滾動</item>
     </string-array>
     <string name="settings_behavior_title">行為</string>
+    <string name="pref_key_tools" translatable="false">tools</string>
+    <string name="settings_tools_title">工具資料夾</string>
+    <string name="settings_tools_summary">FTP 伺服器</string>
     <string name="settings_default_directory_title">預設資料夾</string>
     <string name="settings_standard_directories_title">標準資料夾</string>
     <string name="settings_standard_directories_summary_empty">未啟用標準資料夾</string>
@@ -638,7 +641,7 @@
     <string name="settings_read_remote_files_for_thumbnail_title">讀取遠端檔案以顯示縮圖</string>
 
     <string name="about_title">關於</string>
-    <string name="about_fork_description">Material Files 的方屏手錶適配版：全域介面縮放，內建文字編輯器與圖片檢視器針對小螢幕最佳化。</string>
+    <string name="about_fork_description">Material Files 的方屏手錶適配版。</string>
     <string name="about_version_title">版本</string>
     <string name="about_github_title">在 GitHub 上查看</string>
     <string name="about_licenses_title">許可證</string>
@@ -646,5 +649,6 @@
     <string name="about_author_title">作者</string>
     <string name="about_author_name_title">張海</string>
     <string name="about_author_github_title">在 GitHub 上關注</string>
-    <string name="about_author_twitter_title">在 Twitter 上關注</string>
+    <string name="about_maintainer_title">二改作者</string>
+    <string name="about_maintainer_name_title" translatable="false">XuexGao</string>
 </resources>

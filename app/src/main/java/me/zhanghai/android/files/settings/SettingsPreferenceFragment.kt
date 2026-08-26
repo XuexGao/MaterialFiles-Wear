@@ -10,12 +10,15 @@ import android.os.Bundle
 import androidx.preference.Preference
 import me.zhanghai.android.files.R
 import me.zhanghai.android.files.app.application
+import me.zhanghai.android.files.ftpserver.FtpServerActivity
 import me.zhanghai.android.files.theme.custom.CustomThemeHelper
 import me.zhanghai.android.files.theme.custom.ThemeColor
 import me.zhanghai.android.files.theme.night.NightMode
 import me.zhanghai.android.files.theme.night.NightModeHelper
 import me.zhanghai.android.files.ui.PreferenceFragmentCompat
 import me.zhanghai.android.files.ui.UiScaleHelper
+import me.zhanghai.android.files.util.createIntent
+import me.zhanghai.android.files.util.startActivitySafe
 
 class SettingsPreferenceFragment : PreferenceFragmentCompat() {
     private lateinit var localePreference: LocalePreference
@@ -56,6 +59,12 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
         Settings.NIGHT_MODE.observe(viewLifecycleOwner, this::onNightModeChanged)
         Settings.BLACK_NIGHT_MODE.observe(viewLifecycleOwner, this::onBlackNightModeChanged)
         Settings.UI_SCALE.observe(viewLifecycleOwner, this::onUiScaleChanged)
+
+        preferenceScreen.findPreference<Preference>(getString(R.string.pref_key_tools))!!
+            .setOnPreferenceClickListener {
+                startActivitySafe(FtpServerActivity::class.createIntent())
+                true
+            }
     }
 
     private fun onThemeColorChanged(themeColor: ThemeColor) {

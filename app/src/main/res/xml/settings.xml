@@ -66,6 +66,11 @@
 
     <PreferenceCategory android:title="@string/settings_behavior_title">
 
+        <Preference
+            android:key="@string/pref_key_tools"
+            android:title="@string/settings_tools_title"
+            android:summary="@string/settings_tools_summary" />
+
         <me.zhanghai.android.files.settings.DefaultDirectoryPreference
             android:key="@string/pref_key_file_list_default_directory"
             android:title="@string/settings_default_directory_title"

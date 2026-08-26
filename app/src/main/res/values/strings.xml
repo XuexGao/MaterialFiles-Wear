@@ -759,6 +759,9 @@
         <item>Marquee</item>
     </string-array>
     <string name="settings_behavior_title">Behavior</string>
+    <string name="pref_key_tools" translatable="false">tools</string>
+    <string name="settings_tools_title">Tools folder</string>
+    <string name="settings_tools_summary">FTP server</string>
     <string name="settings_default_directory_title">Default folder</string>
     <string name="settings_storages_title" translatable="false">@string/storage_list_title</string>
     <string name="settings_storages_summary_empty" translatable="false">@string/storage_list_empty</string>
@@ -792,7 +795,7 @@
     <string name="settings_read_remote_files_for_thumbnail_title">Read remote files for thumbnail</string>
 
     <string name="about_title">About</string>
-    <string name="about_fork_description">A Material Files fork adapted for square watch screens: global UI scaling, built-in text editor and image viewer optimized for small displays.</string>
+    <string name="about_fork_description">A Material Files fork adapted for square watch screens.</string>
     <string name="about_version_title">Version</string>
     <string name="about_github_title">View on GitHub</string>
     <string name="about_licenses_title">Licenses</string>
@@ -800,7 +803,8 @@
     <string name="about_author_title">Author</string>
     <string name="about_author_name_title">Hai Zhang</string>
     <string name="about_author_github_title">Follow on GitHub</string>
-    <string name="about_author_twitter_title">Follow on Twitter</string>
+    <string name="about_maintainer_title">Fork maintainer</string>
+    <string name="about_maintainer_name_title" translatable="false">XuexGao</string>
 
     <string name="shortcut_downloads_title" translatable="false">@string/navigation_standard_directory_downloads</string>
     <string name="shortcut_ftp_server_title" translatable="false">@string/ftp_server_title</string>
