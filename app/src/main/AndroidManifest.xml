@@ -249,7 +249,7 @@
         <activity
             android:name="me.zhanghai.android.files.tools.ToolsListActivity"
             android:exported="false"
-            android:theme="@style/AppTheme.NoActionBar" />
+            android:theme="@style/Theme.MaterialFiles" />
 
         <activity
             android:name="me.zhanghai.android.files.settings.SettingsActivity"

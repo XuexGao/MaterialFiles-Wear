@@ -36,7 +36,7 @@ class ToolsListActivity : AppActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         adapter = ToolsAdapter(this) { tool ->
             when (tool) {
-                is Tool.FtpServer -> startActivitySafe(FtpServerActivity::class.createIntent())
+                is Tool.FtpServer -> startActivitySafe(Intent(context, FtpServerActivity::class.java))
             }
         }
         recyclerView.adapter = adapter
@@ -92,8 +92,8 @@ private sealed interface Tool {
 }
 
 private class ToolsAdapter(
-    private val onToolClick: (Tool) -> Unit,
-    private val context: Context
+    private val context: Context,
+    private val onToolClick: (Tool) -> Unit
 ) : RecyclerView.Adapter<ToolsAdapter.ToolViewHolder>() {
     private val items = mutableListOf<Tool>(
         Tool.FtpServer(

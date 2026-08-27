@@ -35,7 +35,7 @@ class LogcatDumper private constructor(private val context: Context) {
                 val cmd = builder.toString()
                 process = Runtime.getRuntime().exec(cmd)
                 process!!.inputStream.bufferedReader().use { reader ->
-                    var line: String?
+                    var line: String? = null
                     while (running.get() && reader.readLine().also { line = it } != null) {
                         try {
                             FileOutputStream(logFile, true).use { out ->
