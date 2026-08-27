@@ -813,4 +813,14 @@
     <string name="navigation_apk_extract">Extract APKs</string>
     <string name="apk_extract_tab_user">User apps</string>
     <string name="apk_extract_tab_system">System apps</string>
+    <string name="apk_extract_menu_launch">Launch</string>
+    <string name="apk_extract_menu_details">Details</string>
+    <string name="apk_extract_menu_uninstall">Uninstall</string>
+    <string name="apk_extract_menu_extract">Extract</string>
+    <string name="apk_extract_launch_failed">Cannot launch this app</string>
+    <string name="apk_extract_open_details_failed">Failed to open details</string>
+    <string name="apk_extract_uninstall_failed">Failed to uninstall</string>
+    <string name="apk_extract_saved">Saved to %s</string>
+    <string name="apk_extract_share_title">Share APK</string>
+    <string name="apk_extract_failed">Extract failed</string>
 </resources>

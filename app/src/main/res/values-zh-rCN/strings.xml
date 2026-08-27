@@ -656,4 +656,14 @@
     <string name="navigation_apk_extract">安装包提取</string>
     <string name="apk_extract_tab_user">用户应用</string>
     <string name="apk_extract_tab_system">系统应用</string>
+    <string name="apk_extract_menu_launch">启动</string>
+    <string name="apk_extract_menu_details">详情</string>
+    <string name="apk_extract_menu_uninstall">卸载</string>
+    <string name="apk_extract_menu_extract">提取</string>
+    <string name="apk_extract_launch_failed">无法启动此应用</string>
+    <string name="apk_extract_open_details_failed">打开详情失败</string>
+    <string name="apk_extract_uninstall_failed">卸载失败</string>
+    <string name="apk_extract_saved">已保存到 %s</string>
+    <string name="apk_extract_share_title">分享安装包</string>
+    <string name="apk_extract_failed">提取失败</string>
 </resources>

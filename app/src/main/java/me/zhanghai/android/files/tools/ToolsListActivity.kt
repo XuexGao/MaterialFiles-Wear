@@ -12,14 +12,11 @@ import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
-import androidx.core.view.isVisible
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import me.zhanghai.android.files.R
+import me.zhanghai.android.files.apk.ApkExtractActivity
 import me.zhanghai.android.files.app.AppActivity
 import me.zhanghai.android.files.ftpserver.FtpServerActivity
 import me.zhanghai.android.files.databinding.ToolsListItemBinding
@@ -37,6 +34,7 @@ class ToolsListActivity : AppActivity() {
         adapter = ToolsAdapter(this) { tool ->
             when (tool) {
                 is Tool.FtpServer -> startActivitySafe(Intent(this, FtpServerActivity::class.java))
+                is Tool.ApkExtract -> startActivitySafe(Intent(this, ApkExtractActivity::class.java))
             }
         }
         recyclerView.adapter = adapter
@@ -89,6 +87,7 @@ class ToolsListActivity : AppActivity() {
 
 private sealed interface Tool {
     data class FtpServer(val name: String, val description: String) : Tool
+    data class ApkExtract(val name: String, val description: String) : Tool
 }
 
 private class ToolsAdapter(
@@ -98,6 +97,10 @@ private class ToolsAdapter(
     private val items = mutableListOf<Tool>(
         Tool.FtpServer(
             name = context.getString(R.string.navigation_ftp_server),
+            description = context.getString(R.string.settings_tools_ftp_summary)
+        ),
+        Tool.ApkExtract(
+            name = context.getString(R.string.navigation_apk_extract),
             description = context.getString(R.string.settings_tools_ftp_summary)
         )
     )
@@ -135,11 +138,13 @@ private class ToolsAdapter(
         fun bind(tool: Tool) {
             binding.title.text = when (tool) {
                 is Tool.FtpServer -> tool.name
+                is Tool.ApkExtract -> tool.name
             }
             binding.summary.text = when (tool) {
                 is Tool.FtpServer -> tool.description
+                is Tool.ApkExtract -> tool.description
             }
-            binding.icon.setImageResource(R.drawable.shared_directory_icon_white_24dp)
+            binding.icon.setImageResource(when (tool) { is Tool.FtpServer -> R.drawable.shared_directory_icon_white_24dp is Tool.ApkExtract -> R.drawable.file_apk_icon })
         }
     }
 }
