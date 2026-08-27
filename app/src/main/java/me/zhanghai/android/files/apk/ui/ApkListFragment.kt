@@ -13,7 +13,7 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -56,6 +56,22 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
         loadApps()
     }
 
+    private var currentQuery: String = ""
+    private var allApps: List<AppEntry> = emptyList()
+
+    fun filter(query: String) {
+        currentQuery = query
+        val filtered = if (query.isBlank()) {
+            allApps
+        } else {
+            allApps.filter {
+                it.label.contains(query, ignoreCase = true) ||
+                        it.packageName.contains(query, ignoreCase = true)
+            }
+        }
+        adapter.setItems(filtered)
+    }
+
     private fun loadApps() {
         if (isLoading || _binding == null) {
             return
@@ -67,8 +83,9 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
                 val apps = withContext(Dispatchers.IO) {
                     fetchApps()
                 }
+                allApps = apps
                 if (_binding != null) {
-                    adapter.setItems(apps)
+                    filter(currentQuery)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -123,7 +140,7 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
             getString(R.string.apk_extract_menu_uninstall),
             getString(R.string.apk_extract_menu_extract)
         )
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(entry.label)
             .setItems(items) { _, which ->
                 when (which) {
@@ -161,9 +178,10 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
 
     private fun uninstallApp(packageName: String) {
         try {
-            val intent = Intent(Intent.ACTION_DELETE, Uri.parse("package:$packageName"))
+            val intent = Intent(Intent.ACTION_DELETE, Uri.fromParts("package", packageName, null))
             startActivitySafe(intent)
         } catch (e: Exception) {
+            e.printStackTrace()
             showToast(R.string.apk_extract_uninstall_failed)
         }
     }

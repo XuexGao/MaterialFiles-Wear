@@ -277,8 +277,14 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         )
         addOnBackPressedCallback(overlayActionMode.onBackPressedCallback)
         addOnBackPressedCallback(SpeedDialViewOnBackPressedCallback(binding.speedDialView))
-        binding.drawerLayout?.let {
-            addOnBackPressedCallback(DrawerLayoutOnBackPressedCallback(it))
+        binding.drawerLayout?.let { drawerLayout ->
+            addOnBackPressedCallback(DrawerLayoutOnBackPressedCallback(drawerLayout))
+            drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+            drawerLayout.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
+                override fun onDrawerClosed(drawerView: View) {
+                    drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+                }
+            })
         }
 
         if (!viewModel.hasTrail) {
@@ -448,7 +454,10 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             android.R.id.home -> {
-                binding.drawerLayout?.openDrawer(GravityCompat.START)
+                binding.drawerLayout?.let {
+                    it.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+                    it.openDrawer(GravityCompat.START)
+                }
                 if (binding.persistentDrawerLayout != null) {
                     Settings.FILE_LIST_PERSISTENT_DRAWER_OPEN.putValue(
                         !Settings.FILE_LIST_PERSISTENT_DRAWER_OPEN.valueCompat
@@ -536,6 +545,16 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             }
             R.id.action_add_bookmark -> {
                 addBookmark()
+                true
+            }
+            R.id.action_search -> {
+                if (!menuBinding.searchItem.isActionViewExpanded) {
+                    menuBinding.searchItem.expandActionView()
+                }
+                true
+            }
+            R.id.action_exit -> {
+                requireActivity().finishAffinity()
                 true
             }
             else -> super.onOptionsItemSelected(item)

@@ -6,7 +6,10 @@
 package me.zhanghai.android.files.apk
 
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
+import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
@@ -17,11 +20,15 @@ import me.zhanghai.android.files.databinding.ApkExtractActivityBinding
 
 class ApkExtractActivity : AppActivity() {
     private lateinit var binding: ApkExtractActivityBinding
+    private var searchItem: MenuItem? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ApkExtractActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         val adapter = ApkPagerAdapter(this)
         binding.viewPager.adapter = adapter
@@ -32,6 +39,51 @@ class ApkExtractActivity : AppActivity() {
                 getString(R.string.apk_extract_tab_system)
             }
         }.attach()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.apk_extract, menu)
+        searchItem = menu.findItem(R.id.action_search)
+        val searchView = searchItem?.actionView as? SearchView
+        searchView?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String): Boolean {
+                search(query)
+                return true
+            }
+
+            override fun onQueryTextChange(newText: String): Boolean {
+                search(newText)
+                return true
+            }
+        })
+        searchItem?.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
+            override fun onMenuItemActionExpand(item: MenuItem): Boolean = true
+
+            override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
+                search("")
+                return true
+            }
+        })
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            android.R.id.home -> {
+                finish()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun search(query: String) {
+        val currentItem = binding.viewPager.currentItem
+        val tag = "f$currentItem"
+        val fragment = supportFragmentManager.findFragmentByTag(tag)
+        if (fragment is ApkListFragment) {
+            fragment.filter(query)
+        }
     }
 
     private class ApkPagerAdapter(activity: AppActivity) : FragmentStateAdapter(activity) {

@@ -824,4 +824,5 @@
     <string name="apk_extract_share_title">Share APK</string>
     <string name="apk_extract_failed">Extract failed</string>
     <string name="apk_extract_load_failed">Failed to load apps</string>
+    <string name="exit">Exit</string>
 </resources>
