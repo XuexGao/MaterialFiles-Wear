@@ -615,7 +615,6 @@
     <string name="settings_tools_title">工具資料夾</string>
     <string name="settings_tools_summary">FTP 伺服器</string>
     <string name="settings_enable_logging_title">記錄詳細日誌</string>
-    <string name="settings_enable_logging_summary">日誌保存在 Android/data/com.xuexgao.android.files/cache/logs/ 下。</string>
     <string name="settings_default_directory_title">預設資料夾</string>
     <string name="settings_standard_directories_title">標準資料夾</string>
     <string name="settings_standard_directories_summary_empty">未啟用標準資料夾</string>

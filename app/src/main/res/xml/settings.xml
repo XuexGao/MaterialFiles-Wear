@@ -66,11 +66,6 @@
 
     <PreferenceCategory android:title="@string/settings_behavior_title">
 
-        <Preference
-            android:key="@string/pref_key_tools"
-            android:title="@string/settings_tools_title"
-            android:summary="@string/settings_tools_ftp_summary" />
-
         <me.zhanghai.android.files.settings.DefaultDirectoryPreference
             android:key="@string/pref_key_file_list_default_directory"
             android:title="@string/settings_default_directory_title"
@@ -79,6 +74,11 @@
         <me.zhanghai.android.files.settings.StoragesPreference
             android:title="@string/settings_storages_title"
             android:summary="@string/settings_storages_summary_empty" />
+
+        <Preference
+            android:key="@string/pref_key_tools"
+            android:title="@string/settings_tools_title"
+            android:summary="@string/settings_tools_ftp_summary" />
 
         <me.zhanghai.android.files.settings.StandardDirectoriesPreference
             android:title="@string/settings_standard_directories_title"
@@ -125,7 +125,6 @@
         <SwitchPreferenceCompat
             android:key="@string/pref_key_enable_logging"
             android:title="@string/settings_enable_logging_title"
-            android:summary="@string/settings_enable_logging_summary"
             android:defaultValue="@bool/pref_default_value_enable_logging" />
     </PreferenceCategory>
 </PreferenceScreen>

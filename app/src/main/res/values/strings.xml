@@ -763,7 +763,6 @@
     <string name="settings_tools_title">Tools folder</string>
     <string name="settings_tools_summary">FTP server</string>
     <string name="settings_enable_logging_title">Enable detailed logs</string>
-    <string name="settings_enable_logging_summary">Save logs to Android/data/com.xuexgao.android.files/cache/logs/</string>
     <string name="settings_default_directory_title">Default folder</string>
     <string name="settings_storages_title" translatable="false">@string/storage_list_title</string>
     <string name="settings_storages_summary_empty" translatable="false">@string/storage_list_empty</string>

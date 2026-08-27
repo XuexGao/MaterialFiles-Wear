@@ -86,7 +86,7 @@ class ImageViewerAdapter(
 
     /**
      * Handles all gestures of a PhotoView image: single taps toggle the system UI through
-     * [onTap], double tapping and dragging up/down quickly scales the image like
+     * [onTitleTap], double tapping and dragging up/down quickly scales the image like
      * SubsamplingScaleImageView does, and while the image can still pan itself horizontally the
      * pager is asked not to intercept so that pages are only switched at its edges.
      *
@@ -95,7 +95,7 @@ class ImageViewerAdapter(
      * attacher's built in fixed-zoom toggle.
      */
     private fun PhotoView.installImageGestures(
-        onTap: (View) -> Unit,
+        onTitleTap: () -> Unit,
         canPan: (direction: Int) -> Boolean
     ) {
         val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
@@ -104,6 +104,7 @@ class ImageViewerAdapter(
         var lastUpTime = 0L
         var lastUpX = 0f
         var lastUpY = 0f
+        var lastUpInMiddleZone = false
         var baseScale = 1f
         var anchorX = 0f
         var anchorY = 0f
@@ -117,14 +118,21 @@ class ImageViewerAdapter(
             override fun onDoubleTapEvent(motionEvent: MotionEvent): Boolean = true
         })
 
-        // Detect taps manually instead of through the attacher's listener so that single taps
-        // and double taps never share a detector and cannot fight each other.
-        val pendingSingleTap = Runnable {
+        val pendingTitleTap = Runnable {
             if (!quickScaling) {
-                onTap(this@installImageGestures)
+                val zone = height / 3f
+                val y = lastUpY
+                if (y < zone || y > height - zone) {
+                    onTitleTap()
+                }
             }
         }
         val doubleTapTimeout = ViewConfiguration.getDoubleTapTimeout()
+
+        fun isInMiddleZone(y: Float): Boolean {
+            val h = height.toFloat()
+            return h > 0 && y in h / 3f..(2 * h / 3f)
+        }
 
         setOnTouchListener { view, motionEvent ->
             if (quickScaling) {
@@ -151,23 +159,25 @@ class ImageViewerAdapter(
                     MotionEvent.ACTION_DOWN -> {
                         lastX = motionEvent.x
                         disallowed = false
-                        if (SystemClock.uptimeMillis() - lastUpTime <= doubleTapTimeout &&
+                        view.removeCallbacks(pendingTitleTap)
+                        if (lastUpInMiddleZone &&
+                            isInMiddleZone(motionEvent.y) &&
+                            SystemClock.uptimeMillis() - lastUpTime <= doubleTapTimeout &&
                             hypot(
                                 motionEvent.x - lastUpX,
                                 motionEvent.y - lastUpY
                             ) <= touchSlop * 2
                         ) {
-                            // Second tap of a double tap: arm quick scaling immediately so that
-                            // dragging after the second press zooms without waiting for the
-                            // system to confirm the double tap.
+                            // Second tap in the middle zone: arm quick scaling immediately so that
+                            // dragging after the second press zooms without waiting for the system
+                            // to confirm the double tap.
                             quickScaling = true
                             baseScale = scale
                             anchorX = motionEvent.x
                             anchorY = motionEvent.y
                             view.parent?.requestDisallowInterceptTouchEvent(true)
-                            view.removeCallbacks(pendingSingleTap)
                         } else {
-                            view.postDelayed(pendingSingleTap, doubleTapTimeout.toLong())
+                            view.postDelayed(pendingTitleTap, doubleTapTimeout.toLong())
                         }
                     }
                     MotionEvent.ACTION_MOVE -> {
@@ -183,13 +193,14 @@ class ImageViewerAdapter(
                         lastUpTime = SystemClock.uptimeMillis()
                         lastUpX = motionEvent.x
                         lastUpY = motionEvent.y
+                        lastUpInMiddleZone = isInMiddleZone(motionEvent.y)
                         if (disallowed) {
                             view.parent?.requestDisallowInterceptTouchEvent(false)
                             disallowed = false
                         }
                     }
                     MotionEvent.ACTION_CANCEL -> {
-                        view.removeCallbacks(pendingSingleTap)
+                        view.removeCallbacks(pendingTitleTap)
                         if (disallowed) {
                             view.parent?.requestDisallowInterceptTouchEvent(false)
                             disallowed = false
