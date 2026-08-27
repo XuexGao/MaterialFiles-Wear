@@ -25,6 +25,7 @@ import me.zhanghai.android.files.R
 import me.zhanghai.android.files.databinding.ApkAppItemBinding
 import me.zhanghai.android.files.databinding.ApkAppListBinding
 import me.zhanghai.android.files.util.showToast
+import me.zhanghai.android.files.util.startActivitySafe
 import java.io.File
 
 class ApkListFragment : Fragment(R.layout.apk_app_list) {
@@ -97,7 +98,7 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
                         packageName = packageName,
                         versionName = versionName,
                         apkSize = apkSize,
-                        icon = appInfo.loadIcon(pm) ?: context.getDrawable(R.drawable.file_apk_icon)!!
+                        icon = appInfo.loadIcon(pm) ?: requireContext().getDrawable(R.drawable.file_apk_icon)!!
                     )
                 )
             }

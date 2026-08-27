@@ -144,7 +144,12 @@ private class ToolsAdapter(
                 is Tool.FtpServer -> tool.description
                 is Tool.ApkExtract -> tool.description
             }
-            binding.icon.setImageResource(when (tool) { is Tool.FtpServer -> R.drawable.shared_directory_icon_white_24dp is Tool.ApkExtract -> R.drawable.file_apk_icon })
+            binding.icon.setImageResource(
+                when (tool) {
+                    is Tool.FtpServer -> R.drawable.shared_directory_icon_white_24dp
+                    is Tool.ApkExtract -> R.drawable.file_apk_icon
+                }
+            )
         }
     }
 }
