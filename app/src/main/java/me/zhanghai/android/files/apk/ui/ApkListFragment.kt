@@ -223,14 +223,6 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
     }
 }
 
-private data class AppEntry(
-    val label: String,
-    val packageName: String,
-    val versionName: String,
-    val apkSize: Long,
-    val sourceDir: String
-)
-
 private class ApkAppAdapter(
     private val context: android.content.Context,
     private val onItemClick: (AppEntry) -> Unit

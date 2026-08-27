@@ -16,9 +16,12 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatDialogFragment
 import androidx.core.view.isVisible
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import me.zhanghai.android.files.R
 import me.zhanghai.android.files.databinding.DialogApkInfoBinding
 import me.zhanghai.android.files.util.showToast
+import me.zhanghai.android.files.util.startActivitySafe
 import java.io.File
 
 class ApkInfoDialogFragment : AppCompatDialogFragment() {
@@ -72,12 +75,14 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
         }
 
         val signingStatus = pkgInfo?.let {
-            val digests = it.signingCertificateDigests
-            if (digests.isNotEmpty()) {
-                "V1 + V2"
+            val hasSigners = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                it.signingInfo?.apkContentsSigners?.isNotEmpty() == true ||
+                        it.signingInfo?.signingCertificateHistory?.isNotEmpty() == true
             } else {
-                "未签名"
+                @Suppress("DEPRECATION")
+                it.signatures?.isNotEmpty() == true
             }
+            if (hasSigners) "V1 + V2" else "未签名"
         } ?: "未知"
 
         val debuggable = pkgInfo?.let {
@@ -168,7 +173,7 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
         lifecycleScope.launch {
             var targetFile: File? = null
             try {
-                val apkFile = File(entry.appInfo.sourceDir)
+                val apkFile = File(entry.sourceDir)
                 val downloadDir = File(
                     android.os.Environment.getExternalStoragePublicDirectory(
                         android.os.Environment.DIRECTORY_DOWNLOADS
