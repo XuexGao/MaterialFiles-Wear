@@ -11,8 +11,12 @@ import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import me.zhanghai.android.files.R
 import me.zhanghai.android.files.apk.ui.ApkListFragment
 import me.zhanghai.android.files.app.AppActivity
@@ -21,6 +25,7 @@ import me.zhanghai.android.files.databinding.ApkExtractActivityBinding
 class ApkExtractActivity : AppActivity() {
     private lateinit var binding: ApkExtractActivityBinding
     private var searchItem: MenuItem? = null
+    private var searchJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,7 +57,11 @@ class ApkExtractActivity : AppActivity() {
             }
 
             override fun onQueryTextChange(newText: String): Boolean {
-                search(newText)
+                searchJob?.cancel()
+                searchJob = lifecycleScope.launch {
+                    delay(300)
+                    search(newText)
+                }
                 return true
             }
         })
@@ -60,6 +69,7 @@ class ApkExtractActivity : AppActivity() {
             override fun onMenuItemActionExpand(item: MenuItem): Boolean = true
 
             override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
+                searchJob?.cancel()
                 search("")
                 return true
             }
@@ -81,7 +91,7 @@ class ApkExtractActivity : AppActivity() {
         val currentItem = binding.viewPager.currentItem
         val tag = "f$currentItem"
         val fragment = supportFragmentManager.findFragmentByTag(tag)
-        if (fragment is ApkListFragment) {
+        if (fragment is ApkListFragment && fragment.isAdded) {
             fragment.filter(query)
         }
     }

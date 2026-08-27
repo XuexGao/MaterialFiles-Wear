@@ -73,25 +73,27 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
     }
 
     private fun loadApps() {
-        if (isLoading || _binding == null) {
+        if (isLoading || _binding == null || !isAdded) {
             return
         }
         isLoading = true
-        binding.swipeRefreshLayout.isRefreshing = true
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val apps = withContext(Dispatchers.IO) {
                     fetchApps()
                 }
-                allApps = apps
-                if (_binding != null) {
-                    filter(currentQuery)
+                if (!isAdded || _binding == null) {
+                    return@launch
                 }
+                allApps = apps
+                filter(currentQuery)
             } catch (e: Exception) {
                 e.printStackTrace()
-                showToast(R.string.apk_extract_load_failed)
+                if (isAdded) {
+                    showToast(R.string.apk_extract_load_failed)
+                }
             } finally {
-                if (_binding != null) {
+                if (isAdded && _binding != null) {
                     binding.swipeRefreshLayout.isRefreshing = false
                 }
                 isLoading = false
@@ -134,24 +136,9 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
     }
 
     private fun showAppMenu(entry: AppEntry) {
-        val items = arrayOf(
-            getString(R.string.apk_extract_menu_launch),
-            getString(R.string.apk_extract_menu_details),
-            getString(R.string.apk_extract_menu_uninstall),
-            getString(R.string.apk_extract_menu_extract)
-        )
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(entry.label)
-            .setItems(items) { _, which ->
-                when (which) {
-                    0 -> launchApp(entry.packageName)
-                    1 -> openAppDetails(entry.packageName)
-                    2 -> uninstallApp(entry.packageName)
-                    3 -> extractApk(entry)
-                }
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        ApkInfoDialogFragment.newInstance(entry) {
+            extractApk(entry)
+        }.show(parentFragmentManager, "apk_info")
     }
 
     private fun launchApp(packageName: String) {
@@ -188,6 +175,7 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
 
     private fun extractApk(entry: AppEntry) {
         viewLifecycleOwner.lifecycleScope.launch {
+            var targetFile: File? = null
             try {
                 val apkFile = File(entry.appInfo.sourceDir)
                 val downloadDir = File(
@@ -195,20 +183,28 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
                     "apks"
                 )
                 downloadDir.mkdirs()
-                val targetFile = File(downloadDir, "${entry.label}_${entry.versionName}.apk")
+                targetFile = File(downloadDir, "${entry.label}_${entry.versionName}.apk")
                 withContext(Dispatchers.IO) {
                     apkFile.copyTo(targetFile, overwrite = true)
                 }
-                showToast(getString(R.string.apk_extract_saved, targetFile.absolutePath))
-                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "application/vnd.android.package-archive"
-                    putExtra(Intent.EXTRA_STREAM, Uri.fromFile(targetFile))
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                startActivitySafe(Intent.createChooser(shareIntent, getString(R.string.apk_extract_share_title)))
             } catch (e: Exception) {
                 e.printStackTrace()
                 showToast(R.string.apk_extract_failed)
+                return@launch
+            }
+
+            targetFile?.let { file ->
+                showToast(getString(R.string.apk_extract_saved, file.absolutePath))
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/vnd.android.package-archive"
+                    putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file))
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                try {
+                    startActivitySafe(Intent.createChooser(shareIntent, getString(R.string.apk_extract_share_title)))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
     }
