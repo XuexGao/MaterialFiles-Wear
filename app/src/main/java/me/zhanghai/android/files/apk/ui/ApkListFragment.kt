@@ -20,7 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.zhanghai.android.files.R
-import me.zhanghai.android.files.coil.AppIconPackageName
+import me.zhanghai.android.files.coil.LargeAppIconPackageName
 import me.zhanghai.android.files.coil.ignoreError
 import me.zhanghai.android.files.compat.getDrawableCompat
 import me.zhanghai.android.files.databinding.ApkAppItemBinding
@@ -191,7 +191,8 @@ private class ApkAppAdapter(
             binding.size.text = entry.apkSize.asFileSize().formatHumanReadable(itemView.context)
             binding.packageName.text = entry.packageName
             val placeholder = itemView.context.getDrawableCompat(R.drawable.file_apk_icon)
-            binding.icon.load(AppIconPackageName(entry.packageName)) {
+            // Full-detail icon source so the large list icons stay sharp.
+            binding.icon.load(LargeAppIconPackageName(entry.packageName)) {
                 placeholder(placeholder)
                 ignoreError()
             }

@@ -613,6 +613,26 @@ private fun migrateDocumentManagerShortcutSetting1_7_2() {
     defaultSharedPreferences.edit { putString(key, newBytes?.toBase64()?.value) }
 }
 
+internal fun upgradeAppTo2_0_0() {
+    migrateFontScaleSetting2_0_0()
+}
+
+private fun migrateFontScaleSetting2_0_0() {
+    // An earlier build persisted the font scale as an integer, which crashes the string-based
+    // readers in this version; normalize such a legacy value into the ordinal string format.
+    val key = application.getString(R.string.pref_key_font_scale)
+    val value = defaultSharedPreferences.all[key]
+    if (value is Int) {
+        defaultSharedPreferences.edit {
+            if (value in 0..5) {
+                putString(key, value.toString())
+            } else {
+                remove(key)
+            }
+        }
+    }
+}
+
 private fun readWriteLengthPrefixedValue(oldParcel: Parcel, newParcel: Parcel, block: () -> Unit) {
     var lengthPosition = 0
     var startPosition = 0

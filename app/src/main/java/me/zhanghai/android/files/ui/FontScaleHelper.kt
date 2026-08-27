@@ -78,8 +78,17 @@ object FontScaleHelper {
         get() {
             // Read the shared preferences directly because this is called from
             // attachBaseContext(), where the settings live data may not be loaded yet.
+            // The preference stores an ordinal string (see FontScale); fall back to 100% for a
+            // missing or out-of-range value. Reading through the map also tolerates an integer
+            // left behind by an older build, which would crash SharedPreferences.getString().
             val key = application.getString(R.string.pref_key_font_scale)
-            val scale = defaultSharedPreferences.getInt(key, 100)
-            return scale / 100f
+            val raw = defaultSharedPreferences.all[key]
+            val ordinal = when (raw) {
+                is String -> raw.toIntOrNull()
+                is Int -> raw
+                else -> null
+            }
+            val scale = FontScale.entries.getOrNull(ordinal ?: -1) ?: FontScale.P100
+            return scale.percent / 100f
         }
 }

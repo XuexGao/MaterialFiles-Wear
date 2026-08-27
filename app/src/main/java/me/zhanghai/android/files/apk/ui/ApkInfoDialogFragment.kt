@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDialogFragment
 import androidx.appcompat.widget.PopupMenu
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -60,8 +61,21 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
         populateViews()
         return MaterialAlertDialogBuilder(requireContext(), theme)
             .setView(binding.root)
+            // The neutral button lands on the left of the dialog's button bar, like the overflow
+            // menu in the main screen, and shares the exact style of the extract button.
+            .setNeutralButton(R.string.apk_extract_more, null)
             .setPositiveButton(R.string.apk_extract_action_extract) { _, _ -> extractApk(entry) }
             .create()
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        // Replace the neutral button's click listener so that showing the more menu doesn't
+        // dismiss the dialog.
+        (dialog as? AlertDialog)?.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener { anchor ->
+            showMoreMenu(anchor)
+        }
     }
 
     private fun populateViews() {
@@ -122,8 +136,6 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
             row.findViewById<TextView>(R.id.value).text = value
             infoList.addView(row)
         }
-
-        binding.btnMore.setOnClickListener { anchor -> showMoreMenu(anchor) }
     }
 
     /**

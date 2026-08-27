@@ -52,14 +52,14 @@
     <string name="pref_key_ui_scale">key_ui_scale</string>
     <integer name="pref_default_value_ui_scale">60</integer>
     <string name="pref_key_font_scale">key_font_scale</string>
-    <integer name="pref_default_value_font_scale">100</integer>
+    <string name="pref_default_value_font_scale">2</string>
     <string-array name="pref_entry_values_font_scale">
-        <item>80</item>
-        <item>90</item>
-        <item>100</item>
-        <item>110</item>
-        <item>120</item>
-        <item>130</item>
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
     </string-array>
     <string name="pref_key_file_list_animation">key_file_list_animation</string>
     <bool name="pref_default_value_file_list_animation">true</bool>

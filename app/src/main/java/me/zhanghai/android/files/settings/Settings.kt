@@ -23,6 +23,7 @@ import me.zhanghai.android.files.storage.PrimaryStorageVolume
 import me.zhanghai.android.files.storage.Storage
 import me.zhanghai.android.files.theme.custom.ThemeColor
 import me.zhanghai.android.files.theme.night.NightMode
+import me.zhanghai.android.files.ui.FontScale
 import java.io.File
 
 object Settings {
@@ -128,10 +129,13 @@ object Settings {
         IntegerSettingLiveData(R.string.pref_key_ui_scale, R.integer.pref_default_value_ui_scale)
 
     /**
-     * The font scale in percent, applied on top of the system font scale. 100 means unscaled.
+     * The font scale in percent, applied on top of the system font scale. P100 means unscaled.
      */
-    val FONT_SCALE: SettingLiveData<Int> =
-        IntegerSettingLiveData(R.string.pref_key_font_scale, R.integer.pref_default_value_font_scale)
+    val FONT_SCALE: SettingLiveData<FontScale> =
+        EnumSettingLiveData(
+            R.string.pref_key_font_scale, R.string.pref_default_value_font_scale,
+            FontScale::class.java
+        )
 
     val FILE_LIST_ANIMATION: SettingLiveData<Boolean> =
         BooleanSettingLiveData(

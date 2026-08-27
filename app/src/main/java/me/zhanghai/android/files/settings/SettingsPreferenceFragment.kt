@@ -18,6 +18,7 @@ import me.zhanghai.android.files.theme.night.NightMode
 import me.zhanghai.android.files.theme.night.NightModeHelper
 import me.zhanghai.android.files.ui.PreferenceFragmentCompat
 import me.zhanghai.android.files.tools.ToolsListActivity
+import me.zhanghai.android.files.ui.FontScale
 import me.zhanghai.android.files.ui.FontScaleHelper
 import me.zhanghai.android.files.ui.UiScaleHelper
 import me.zhanghai.android.files.util.createIntent
@@ -106,7 +107,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
         UiScaleHelper.sync()
     }
 
-    private fun onFontScaleChanged(fontScale: Int) {
+    private fun onFontScaleChanged(fontScale: FontScale) {
         FontScaleHelper.sync()
     }
 

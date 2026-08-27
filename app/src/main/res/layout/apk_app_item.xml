@@ -19,10 +19,10 @@
 
         <ImageView
             android:id="@+id/icon"
-            android:layout_width="@dimen/icon_size"
-            android:layout_height="@dimen/icon_size"
+            android:layout_width="@dimen/large_app_icon_size"
+            android:layout_height="@dimen/large_app_icon_size"
             android:layout_marginEnd="@dimen/content_start_from_screen_edge_margin_minus_24dp"
-            android:scaleType="centerCrop"
+            android:scaleType="fitCenter"
              />
 
         <LinearLayout

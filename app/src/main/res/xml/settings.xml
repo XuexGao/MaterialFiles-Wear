@@ -66,7 +66,7 @@
         <rikka.preference.SimpleMenuPreference
             android:key="@string/pref_key_font_scale"
             android:title="@string/settings_font_scale_title"
-            android:defaultValue="@integer/pref_default_value_font_scale"
+            android:defaultValue="@string/pref_default_value_font_scale"
             android:entries="@array/settings_font_scale_entries"
             android:entryValues="@array/pref_entry_values_font_scale"
             app:useSimpleSummaryProvider="true" />
