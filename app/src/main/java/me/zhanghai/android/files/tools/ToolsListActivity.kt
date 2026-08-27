@@ -36,7 +36,7 @@ class ToolsListActivity : AppActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         adapter = ToolsAdapter(this) { tool ->
             when (tool) {
-                is Tool.FtpServer -> startActivitySafe(Intent(context, FtpServerActivity::class.java))
+                is Tool.FtpServer -> startActivitySafe(Intent(this, FtpServerActivity::class.java))
             }
         }
         recyclerView.adapter = adapter
