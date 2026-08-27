@@ -109,79 +109,95 @@ class ImageViewerAdapter(
         var anchorY = 0f
         var quickScaling = false
 
-        // Replace the default double tap listener so that the attacher doesn't animate its own
-        // fixed zoom level on top of our continuous scaling.
+        // Suppress the attacher's own fixed-zoom double tap so it cannot fight our continuous
+        // quick scaling below.
         attacher.setOnDoubleTapListener(object : GestureDetector.OnDoubleTapListener {
-            override fun onSingleTapConfirmed(motionEvent: MotionEvent): Boolean {
-                onTap(this@installImageGestures)
-                return true
-            }
-
+            override fun onSingleTapConfirmed(motionEvent: MotionEvent): Boolean = true
             override fun onDoubleTap(motionEvent: MotionEvent): Boolean = true
-
             override fun onDoubleTapEvent(motionEvent: MotionEvent): Boolean = true
         })
 
-        setOnTouchListener { view, motionEvent ->
-            when (motionEvent.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    lastX = motionEvent.x
-                    disallowed = false
-                    if (!quickScaling &&
-                        SystemClock.uptimeMillis() - lastUpTime <=
-                        ViewConfiguration.getDoubleTapTimeout() &&
-                        hypot(
-                            motionEvent.x - lastUpX,
-                            motionEvent.y - lastUpY
-                        ) <= touchSlop * 2
-                    ) {
-                        // Second tap of a double tap: start quick scaling from this point.
-                        quickScaling = true
-                        baseScale = scale
-                        anchorX = motionEvent.x
-                        anchorY = motionEvent.y
-                        view.parent?.requestDisallowInterceptTouchEvent(true)
-                    }
-                }
-                MotionEvent.ACTION_MOVE -> if (quickScaling) {
-                    // Dragging up zooms in and dragging down zooms out; dragging by half the view
-                    // height doubles the zoom.
-                    val progress = (anchorY - motionEvent.y) / (height * 0.5f)
-                    val targetScale =
-                        baseScale * (1f + progress).coerceIn(minimumScale, maximumScale)
-                    attacher.setScale(targetScale, anchorX, anchorY, false)
-                } else {
-                    // Finger moved right means the image should pan right, revealing its left side.
-                    val direction = if (motionEvent.x > lastX) -1 else 1
-                    lastX = motionEvent.x
-                    if (!disallowed && canPan(direction)) {
-                        disallowed = true
-                        view.parent?.requestDisallowInterceptTouchEvent(true)
-                    }
-                }
-                MotionEvent.ACTION_UP -> {
-                    lastUpTime = SystemClock.uptimeMillis()
-                    lastUpX = motionEvent.x
-                    lastUpY = motionEvent.y
-                    if (disallowed) {
-                        view.parent?.requestDisallowInterceptTouchEvent(false)
-                    }
-                    disallowed = false
-                }
-                MotionEvent.ACTION_CANCEL -> {
-                    if (disallowed) {
-                        view.parent?.requestDisallowInterceptTouchEvent(false)
-                    }
-                    disallowed = false
-                }
+        // Detect taps manually instead of through the attacher's listener so that single taps
+        // and double taps never share a detector and cannot fight each other.
+        val pendingSingleTap = Runnable {
+            if (!quickScaling) {
+                onTap(this@installImageGestures)
             }
-            // Consume only the events that drive quick scaling so that the attacher keeps handling
-            // everything else itself.
-            quickScaling && (
-                motionEvent.actionMasked == MotionEvent.ACTION_MOVE ||
-                    motionEvent.actionMasked == MotionEvent.ACTION_UP ||
-                    motionEvent.actionMasked == MotionEvent.ACTION_CANCEL
-                )
+        }
+        val doubleTapTimeout = ViewConfiguration.getDoubleTapTimeout()
+
+        setOnTouchListener { view, motionEvent ->
+            if (quickScaling) {
+                when (motionEvent.actionMasked) {
+                    MotionEvent.ACTION_MOVE -> {
+                        // Dragging up zooms in and dragging down zooms out; dragging by half the view
+                        // height doubles the zoom.
+                        val progress = (anchorY - motionEvent.y) / (height * 0.5f)
+                        val targetScale =
+                            baseScale * (1f + progress).coerceIn(minimumScale, maximumScale)
+                        attacher.setScale(targetScale, anchorX, anchorY, false)
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        quickScaling = false
+                        if (disallowed) {
+                            view.parent?.requestDisallowInterceptTouchEvent(false)
+                            disallowed = false
+                        }
+                    }
+                }
+                true
+            } else {
+                when (motionEvent.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        lastX = motionEvent.x
+                        disallowed = false
+                        if (SystemClock.uptimeMillis() - lastUpTime <= doubleTapTimeout &&
+                            hypot(
+                                motionEvent.x - lastUpX,
+                                motionEvent.y - lastUpY
+                            ) <= touchSlop * 2
+                        ) {
+                            // Second tap of a double tap: arm quick scaling immediately so that
+                            // dragging after the second press zooms without waiting for the
+                            // system to confirm the double tap.
+                            quickScaling = true
+                            baseScale = scale
+                            anchorX = motionEvent.x
+                            anchorY = motionEvent.y
+                            view.parent?.requestDisallowInterceptTouchEvent(true)
+                            view.removeCallbacks(pendingSingleTap)
+                        } else {
+                            view.postDelayed(pendingSingleTap, doubleTapTimeout.toLong())
+                        }
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        // Finger moved right means the image should pan right, revealing its left side.
+                        val direction = if (motionEvent.x > lastX) -1 else 1
+                        lastX = motionEvent.x
+                        if (!disallowed && canPan(direction)) {
+                            disallowed = true
+                            view.parent?.requestDisallowInterceptTouchEvent(true)
+                        }
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        lastUpTime = SystemClock.uptimeMillis()
+                        lastUpX = motionEvent.x
+                        lastUpY = motionEvent.y
+                        if (disallowed) {
+                            view.parent?.requestDisallowInterceptTouchEvent(false)
+                            disallowed = false
+                        }
+                    }
+                    MotionEvent.ACTION_CANCEL -> {
+                        view.removeCallbacks(pendingSingleTap)
+                        if (disallowed) {
+                            view.parent?.requestDisallowInterceptTouchEvent(false)
+                            disallowed = false
+                        }
+                    }
+                }
+                false
+            }
         }
     }
 

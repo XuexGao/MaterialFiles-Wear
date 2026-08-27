@@ -614,6 +614,8 @@
     <string name="pref_key_tools" translatable="false">tools</string>
     <string name="settings_tools_title">工具文件夹</string>
     <string name="settings_tools_summary">FTP 服务器</string>
+    <string name="settings_enable_logging_title">记录详细日志</string>
+    <string name="settings_enable_logging_summary">日志保存在 Android/data/com.xuexgao.android.files/cache/logs/ 下。</string>
     <string name="settings_default_directory_title">默认文件夹</string>
     <string name="settings_standard_directories_title">标准文件夹</string>
     <string name="settings_standard_directories_summary_empty">未启用标准文件夹</string>
@@ -651,4 +653,5 @@
     <string name="about_author_github_title">在 GitHub 上关注</string>
     <string name="about_maintainer_title">二改作者</string>
     <string name="about_maintainer_name_title" translatable="false">XuexGao</string>
+    <string name="settings_tools_ftp_summary">FTP 服务器</string>
 </resources>

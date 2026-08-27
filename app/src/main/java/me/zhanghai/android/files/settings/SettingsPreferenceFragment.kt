@@ -8,14 +8,16 @@ package me.zhanghai.android.files.settings
 import android.os.Build
 import android.os.Bundle
 import androidx.preference.Preference
+import androidx.preference.SwitchPreferenceCompat
 import me.zhanghai.android.files.R
 import me.zhanghai.android.files.app.application
-import me.zhanghai.android.files.ftpserver.FtpServerActivity
+import me.zhanghai.android.files.app.LogcatDumper
 import me.zhanghai.android.files.theme.custom.CustomThemeHelper
 import me.zhanghai.android.files.theme.custom.ThemeColor
 import me.zhanghai.android.files.theme.night.NightMode
 import me.zhanghai.android.files.theme.night.NightModeHelper
 import me.zhanghai.android.files.ui.PreferenceFragmentCompat
+import me.zhanghai.android.files.tools.ToolsListActivity
 import me.zhanghai.android.files.ui.UiScaleHelper
 import me.zhanghai.android.files.util.createIntent
 import me.zhanghai.android.files.util.startActivitySafe
@@ -62,9 +64,24 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
 
         preferenceScreen.findPreference<Preference>(getString(R.string.pref_key_tools))!!
             .setOnPreferenceClickListener {
-                startActivitySafe(FtpServerActivity::class.createIntent())
+                startActivitySafe(ToolsListActivity::class.createIntent())
                 true
             }
+
+        val enableLoggingPreference =
+            preferenceScreen.findPreference<SwitchPreferenceCompat>(getString(R.string.pref_key_enable_logging))
+        if (enableLoggingPreference?.isChecked == true) {
+            LogcatDumper.get(requireContext()).start()
+        }
+        enableLoggingPreference?.setOnPreferenceChangeListener { _, newValue ->
+            val enabled = newValue as Boolean
+            if (enabled) {
+                LogcatDumper.get(requireContext()).start()
+            } else {
+                LogcatDumper.get(requireContext()).stop()
+            }
+            true
+        }
     }
 
     private fun onThemeColorChanged(themeColor: ThemeColor) {

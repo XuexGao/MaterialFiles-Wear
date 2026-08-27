@@ -69,7 +69,7 @@
         <Preference
             android:key="@string/pref_key_tools"
             android:title="@string/settings_tools_title"
-            android:summary="@string/settings_tools_summary" />
+            android:summary="@string/settings_tools_ftp_summary" />
 
         <me.zhanghai.android.files.settings.DefaultDirectoryPreference
             android:key="@string/pref_key_file_list_default_directory"
@@ -121,5 +121,11 @@
             android:key="@string/pref_key_read_remote_files_for_thumbnail"
             android:title="@string/settings_read_remote_files_for_thumbnail_title"
             android:defaultValue="@bool/pref_default_value_read_remote_files_for_thumbnail" />
+
+        <SwitchPreferenceCompat
+            android:key="@string/pref_key_enable_logging"
+            android:title="@string/settings_enable_logging_title"
+            android:summary="@string/settings_enable_logging_summary"
+            android:defaultValue="@bool/pref_default_value_enable_logging" />
     </PreferenceCategory>
 </PreferenceScreen>
