@@ -101,11 +101,9 @@ private class ToolsAdapter(
         ),
         Tool.ApkExtract(
             name = context.getString(R.string.navigation_apk_extract),
-            description = context.getString(R.string.settings_tools_ftp_summary)
+            description = context.getString(R.string.settings_tools_apk_extract_summary)
         )
     )
-
-    override fun getItemId(position: Int): Long = position.toLong()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ToolViewHolder {
         val binding = ToolsListItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)

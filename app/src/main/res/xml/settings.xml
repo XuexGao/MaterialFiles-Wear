@@ -78,7 +78,7 @@
         <Preference
             android:key="@string/pref_key_tools"
             android:title="@string/settings_tools_title"
-            android:summary="@string/settings_tools_ftp_summary" />
+            android:summary="@string/settings_tools_summary" />
 
         <me.zhanghai.android.files.settings.StandardDirectoriesPreference
             android:title="@string/settings_standard_directories_title"

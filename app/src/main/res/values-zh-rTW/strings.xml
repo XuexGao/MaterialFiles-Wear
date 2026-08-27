@@ -613,7 +613,8 @@
     <string name="settings_behavior_title">行為</string>
     <string name="pref_key_tools" translatable="false">tools</string>
     <string name="settings_tools_title">工具資料夾</string>
-    <string name="settings_tools_summary">FTP 伺服器</string>
+    <string name="settings_tools_summary">FTP 伺服器、安裝包提取</string>
+    <string name="settings_tools_apk_extract_summary">提取已安裝應用的安裝包</string>
     <string name="settings_enable_logging_title">記錄詳細日誌</string>
     <string name="settings_default_directory_title">預設資料夾</string>
     <string name="settings_standard_directories_title">標準資料夾</string>
@@ -669,4 +670,15 @@
     <string name="apk_extract_load_failed">加載應用列表失敗</string>
     <string name="exit">退出</string>
     <string name="apk_extract_title">安裝包提取</string>
+    <string name="apk_extract_info_package_name">套件名稱</string>
+    <string name="apk_extract_info_version_code">版本號</string>
+    <string name="apk_extract_info_apk_size">安裝包大小</string>
+    <string name="apk_extract_info_signed">簽名狀態</string>
+    <string name="apk_extract_info_signed_yes">已簽名</string>
+    <string name="apk_extract_info_signed_no">未簽名</string>
+    <string name="apk_extract_info_data_dir">資料目錄</string>
+    <string name="apk_extract_info_apk_path">APK 路徑</string>
+    <string name="apk_extract_info_uid">UID</string>
+    <string name="apk_extract_more">更多</string>
+    <string name="apk_extract_action_extract">提取安裝包</string>
 </resources>

@@ -5,118 +5,122 @@
 
 package me.zhanghai.android.files.apk.ui
 
+import android.app.Dialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.provider.Settings
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatDialogFragment
-import androidx.core.view.isVisible
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import coil.load
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import java.io.File
+import java8.nio.file.Paths
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.zhanghai.android.files.R
+import me.zhanghai.android.files.coil.AppIconPackageName
+import me.zhanghai.android.files.coil.ignoreError
+import me.zhanghai.android.files.compat.getDrawableCompat
+import me.zhanghai.android.files.compat.longVersionCodeCompat
 import me.zhanghai.android.files.databinding.DialogApkInfoBinding
+import me.zhanghai.android.files.file.MimeType
+import me.zhanghai.android.files.file.asFileSize
+import me.zhanghai.android.files.file.fileProviderUri
+import me.zhanghai.android.files.util.createSendStreamIntent
+import me.zhanghai.android.files.util.layoutInflater
 import me.zhanghai.android.files.util.showToast
 import me.zhanghai.android.files.util.startActivitySafe
-import java.io.File
+import me.zhanghai.android.files.util.withChooser
 
 class ApkInfoDialogFragment : AppCompatDialogFragment() {
-    private var _binding: DialogApkInfoBinding? = null
-    private val binding get() = _binding!!
-
     private lateinit var entry: AppEntry
-    private var onExtract: (() -> Unit)? = null
+
+    private lateinit var binding: DialogApkInfoBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val label = requireArguments().getString(ARG_LABEL)!!
-        val packageName = requireArguments().getString(ARG_PACKAGE_NAME)!!
-        val versionName = requireArguments().getString(ARG_VERSION_NAME)!!
-        val apkSize = requireArguments().getLong(ARG_APK_SIZE)
-        val sourceDir = requireArguments().getString(ARG_SOURCE_DIR)!!
-        entry = AppEntry(label, packageName, versionName, apkSize, sourceDir)
-        onExtract = {
-            dismiss()
-            extractApk(entry)
-        }
+        val args = requireArguments()
+        entry = AppEntry(
+            label = args.getString(ARG_LABEL)!!,
+            packageName = args.getString(ARG_PACKAGE_NAME)!!,
+            versionName = args.getString(ARG_VERSION_NAME)!!,
+            apkSize = args.getLong(ARG_APK_SIZE),
+            sourceDir = args.getString(ARG_SOURCE_DIR)!!
+        )
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        _binding = DialogApkInfoBinding.inflate(inflater, container, false)
-        return binding.root
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        binding = DialogApkInfoBinding.inflate(layoutInflater)
+        populateViews()
+        return MaterialAlertDialogBuilder(requireContext(), theme)
+            .setTitle(entry.label)
+            .setView(binding.root)
+            .setNegativeButton(R.string.apk_extract_more) { _, _ -> showMoreMenu() }
+            .setPositiveButton(R.string.apk_extract_action_extract) { _, _ -> extractApk(entry) }
+            .create()
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        val pm = requireContext().packageManager
+    private fun populateViews() {
+        val context = requireContext()
+        val pm = context.packageManager
         val appInfo = try {
             pm.getApplicationInfo(entry.packageName, 0)
         } catch (e: Exception) {
             null
         }
-        val icon = appInfo?.loadIcon(pm) ?: requireContext().getDrawable(R.drawable.file_apk_icon)
-        binding.icon.setImageDrawable(icon)
-        binding.appName.text = entry.label
-        binding.version.text = entry.versionName
-
         val pkgInfo = try {
             pm.getPackageInfo(entry.packageName, 0)
         } catch (e: Exception) {
             null
         }
 
-        val signingStatus = pkgInfo?.let {
-            val hasSigners = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                it.signingInfo?.apkContentsSigners?.isNotEmpty() == true ||
+        val placeholder = context.getDrawableCompat(R.drawable.file_apk_icon)
+        binding.icon.load(AppIconPackageName(entry.packageName)) {
+            placeholder(placeholder)
+            ignoreError()
+        }
+        binding.version.text = entry.versionName
+
+        val signed = pkgInfo?.let {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                it.signingInfo?.hasMultipleSigners() == true ||
+                        it.signingInfo?.apkContentsSigners?.isNotEmpty() == true ||
                         it.signingInfo?.signingCertificateHistory?.isNotEmpty() == true
             } else {
                 @Suppress("DEPRECATION")
                 it.signatures?.isNotEmpty() == true
             }
-            if (hasSigners) "V1 + V2" else "未签名"
-        } ?: "未知"
-
-        val debuggable = pkgInfo?.let {
-            (it.applicationInfo!!.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
-        } ?: false
-
+        }
         val rows = listOf(
-            "包名" to entry.packageName,
-            "版本号" to (pkgInfo?.versionCode?.toString() ?: "未知"),
-            "安装包大小" to formatSize(entry.apkSize),
-            "签名状态" to signingStatus,
-            "加固状态" to if (debuggable) "可调试" else "未加固",
-            "数据目录1" to (pkgInfo?.applicationInfo?.dataDir ?: "未知"),
-            "数据目录2" to requireContext().getExternalFilesDir(null)?.absolutePath.orEmpty(),
-            "APK路径" to entry.sourceDir,
-            "UID" to (pkgInfo?.applicationInfo?.uid?.toString() ?: "未知")
+            getString(R.string.apk_extract_info_package_name) to entry.packageName,
+            getString(R.string.apk_extract_info_version_code) to
+                    (pkgInfo?.longVersionCodeCompat?.toString() ?: getString(R.string.unknown)),
+            getString(R.string.apk_extract_info_apk_size) to
+                    entry.apkSize.asFileSize().formatHumanReadable(context),
+            getString(R.string.apk_extract_info_signed) to getString(
+                if (signed == true) {
+                    R.string.apk_extract_info_signed_yes
+                } else {
+                    R.string.apk_extract_info_signed_no
+                }
+            ),
+            getString(R.string.apk_extract_info_data_dir) to
+                    (appInfo?.dataDir ?: getString(R.string.unknown)),
+            getString(R.string.apk_extract_info_apk_path) to entry.sourceDir,
+            getString(R.string.apk_extract_info_uid) to
+                    (appInfo?.uid?.toString() ?: getString(R.string.unknown))
         )
-
-        binding.infoList.removeAllViews()
-        rows.forEach { (label, value) ->
-            val row = layoutInflater.inflate(R.layout.apk_info_row, binding.infoList, false)
+        val infoList = binding.infoList
+        for ((label, value) in rows) {
+            val row = layoutInflater.inflate(R.layout.apk_info_row, infoList, false)
             row.findViewById<TextView>(R.id.label).text = label
             row.findViewById<TextView>(R.id.value).text = value
-            binding.infoList.addView(row)
-        }
-
-        binding.btnMore.setOnClickListener {
-            showMoreMenu()
-        }
-
-        binding.btnExtract.setOnClickListener {
-            onExtract?.invoke()
+            infoList.addView(row)
         }
     }
 
@@ -126,7 +130,7 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
             getString(R.string.apk_extract_menu_details),
             getString(R.string.apk_extract_menu_uninstall)
         )
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(entry.label)
             .setItems(items) { _, which ->
                 when (which) {
@@ -140,8 +144,7 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
     }
 
     private fun launchApp(packageName: String) {
-        val pm = requireContext().packageManager
-        val intent = pm.getLaunchIntentForPackage(packageName)
+        val intent = requireContext().packageManager.getLaunchIntentForPackage(packageName)
         if (intent != null) {
             startActivitySafe(intent)
         } else {
@@ -166,64 +169,48 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
             val intent = Intent(Intent.ACTION_DELETE, Uri.fromParts("package", packageName, null))
             startActivitySafe(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
             showToast(R.string.apk_extract_uninstall_failed)
         }
     }
 
     private fun extractApk(entry: AppEntry) {
-        lifecycleScope.launch {
-            var targetFile: File? = null
-            try {
-                val apkFile = File(entry.sourceDir)
-                val downloadDir = File(
-                    android.os.Environment.getExternalStoragePublicDirectory(
-                        android.os.Environment.DIRECTORY_DOWNLOADS
-                    ),
-                    "apks"
-                )
-                downloadDir.mkdirs()
-                targetFile = File(downloadDir, "${entry.label}_${entry.versionName}.apk")
+        // The dialog is dismissed when this runs, so capture the application context and use the
+        // process lifecycle to keep the copy alive after this fragment is destroyed.
+        val context = requireContext().applicationContext
+        ProcessLifecycleOwner.get().lifecycleScope.launch {
+            val targetFile = try {
                 withContext(Dispatchers.IO) {
+                    val apkFile = File(entry.sourceDir)
+                    val downloadDir = File(
+                        Environment.getExternalStoragePublicDirectory(
+                            Environment.DIRECTORY_DOWNLOADS
+                        ),
+                        "apks"
+                    )
+                    downloadDir.mkdirs()
+                    val fileName = "${entry.label}_${entry.versionName}"
+                        .replace(UNSAFE_FILE_NAME_CHARS, "_") + ".apk"
+                    val targetFile = File(downloadDir, fileName)
                     apkFile.copyTo(targetFile, overwrite = true)
+                    targetFile
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                showToast(R.string.apk_extract_failed)
+                context.showToast(R.string.apk_extract_failed)
                 return@launch
             }
 
-            targetFile?.let { file ->
-                showToast(getString(R.string.apk_extract_saved, file.absolutePath))
-                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "application/vnd.android.package-archive"
-                    putExtra(Intent.EXTRA_STREAM, android.net.Uri.fromFile(file))
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                try {
-                    startActivitySafe(Intent.createChooser(shareIntent, getString(R.string.apk_extract_share_title)))
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+            context.showToast(context.getString(R.string.apk_extract_saved, targetFile.absolutePath))
+            val intent = Paths.get(targetFile.absolutePath).fileProviderUri
+                .createSendStreamIntent(MimeType.APK)
+                .withChooser(context.getString(R.string.apk_extract_share_title))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try {
+                context.startActivitySafe(intent)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
-    }
-
-    private fun formatSize(bytes: Long): String {
-        if (bytes <= 0) return "0 B"
-        val units = arrayOf("B", "KB", "MB", "GB")
-        var size = bytes.toDouble()
-        var i = 0
-        while (size >= 1024 && i < units.lastIndex) {
-            size /= 1024
-            i++
-        }
-        return String.format("%.1f %s", size, units[i])
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 
     companion object {
@@ -232,8 +219,9 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
         private const val ARG_VERSION_NAME = "version_name"
         private const val ARG_APK_SIZE = "apk_size"
         private const val ARG_SOURCE_DIR = "source_dir"
+        private val UNSAFE_FILE_NAME_CHARS = Regex("[\\\\/:*?\"<>|\\u0000]")
 
-        fun newInstance(entry: AppEntry, onExtract: () -> Unit): ApkInfoDialogFragment {
+        fun newInstance(entry: AppEntry): ApkInfoDialogFragment {
             return ApkInfoDialogFragment().apply {
                 arguments = Bundle().apply {
                     putString(ARG_LABEL, entry.label)
@@ -242,7 +230,6 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
                     putLong(ARG_APK_SIZE, entry.apkSize)
                     putString(ARG_SOURCE_DIR, entry.sourceDir)
                 }
-                this.onExtract = onExtract
             }
         }
     }
