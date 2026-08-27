@@ -30,7 +30,12 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        entry = requireArguments().getParcelable(ARG_ENTRY)!!
+        val label = requireArguments().getString(ARG_LABEL)!!
+        val packageName = requireArguments().getString(ARG_PACKAGE_NAME)!!
+        val versionName = requireArguments().getString(ARG_VERSION_NAME)!!
+        val apkSize = requireArguments().getLong(ARG_APK_SIZE)
+        val sourceDir = requireArguments().getString(ARG_SOURCE_DIR)!!
+        entry = AppEntry(label, packageName, versionName, apkSize, sourceDir)
         onExtract = {
             dismiss()
             extractApk(entry)
@@ -49,11 +54,17 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.icon.setImageDrawable(entry.icon)
+        val pm = requireContext().packageManager
+        val appInfo = try {
+            pm.getApplicationInfo(entry.packageName, 0)
+        } catch (e: Exception) {
+            null
+        }
+        val icon = appInfo?.loadIcon(pm) ?: requireContext().getDrawable(R.drawable.file_apk_icon)
+        binding.icon.setImageDrawable(icon)
         binding.appName.text = entry.label
         binding.version.text = entry.versionName
 
-        val pm = requireContext().packageManager
         val pkgInfo = try {
             pm.getPackageInfo(entry.packageName, 0)
         } catch (e: Exception) {
@@ -81,7 +92,7 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
             "加固状态" to if (debuggable) "可调试" else "未加固",
             "数据目录1" to (pkgInfo?.applicationInfo?.dataDir ?: "未知"),
             "数据目录2" to requireContext().getExternalFilesDir(null)?.absolutePath.orEmpty(),
-            "APK路径" to entry.appInfo.sourceDir,
+            "APK路径" to entry.sourceDir,
             "UID" to (pkgInfo?.applicationInfo?.uid?.toString() ?: "未知")
         )
 
@@ -209,12 +220,20 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
     }
 
     companion object {
-        private const val ARG_ENTRY = "entry"
+        private const val ARG_LABEL = "label"
+        private const val ARG_PACKAGE_NAME = "package_name"
+        private const val ARG_VERSION_NAME = "version_name"
+        private const val ARG_APK_SIZE = "apk_size"
+        private const val ARG_SOURCE_DIR = "source_dir"
 
         fun newInstance(entry: AppEntry, onExtract: () -> Unit): ApkInfoDialogFragment {
             return ApkInfoDialogFragment().apply {
                 arguments = Bundle().apply {
-                    putParcelable(ARG_ENTRY, entry)
+                    putString(ARG_LABEL, entry.label)
+                    putString(ARG_PACKAGE_NAME, entry.packageName)
+                    putString(ARG_VERSION_NAME, entry.versionName)
+                    putLong(ARG_APK_SIZE, entry.apkSize)
+                    putString(ARG_SOURCE_DIR, entry.sourceDir)
                 }
                 this.onExtract = onExtract
             }

@@ -121,12 +121,11 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
                 }
                 result.add(
                     AppEntry(
-                        appInfo = appInfo,
                         label = label,
                         packageName = packageName,
                         versionName = versionName,
                         apkSize = apkSize,
-                        icon = appInfo.loadIcon(pm) ?: requireContext().getDrawable(R.drawable.file_apk_icon)!!
+                        sourceDir = appInfo.sourceDir
                     )
                 )
             }
@@ -140,6 +139,7 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
             extractApk(entry)
         }.show(parentFragmentManager, "apk_info")
     }
+
 
     private fun launchApp(packageName: String) {
         val pm = requireContext().packageManager
@@ -177,7 +177,7 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
         viewLifecycleOwner.lifecycleScope.launch {
             var targetFile: File? = null
             try {
-                val apkFile = File(entry.appInfo.sourceDir)
+                val apkFile = File(entry.sourceDir)
                 val downloadDir = File(
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                     "apks"
@@ -224,12 +224,11 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
 }
 
 private data class AppEntry(
-    val appInfo: android.content.pm.ApplicationInfo,
     val label: String,
     val packageName: String,
     val versionName: String,
     val apkSize: Long,
-    val icon: android.graphics.drawable.Drawable
+    val sourceDir: String
 )
 
 private class ApkAppAdapter(
@@ -281,7 +280,13 @@ private class ApkAppAdapter(
         }
 
         fun bind(entry: AppEntry) {
-            binding.icon.setImageDrawable(entry.icon)
+            val pm = context.packageManager
+            try {
+                val appInfo = pm.getApplicationInfo(entry.packageName, 0)
+                binding.icon.setImageDrawable(appInfo.loadIcon(pm))
+            } catch (e: Exception) {
+                binding.icon.setImageResource(R.drawable.file_apk_icon)
+            }
             binding.title.text = entry.label
             binding.version.text = entry.versionName
             binding.size.text = formatSize(entry.apkSize)
