@@ -16,7 +16,9 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatDialogFragment
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.zhanghai.android.files.R
 import me.zhanghai.android.files.databinding.DialogApkInfoBinding
@@ -86,7 +88,7 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
         } ?: "未知"
 
         val debuggable = pkgInfo?.let {
-            (it.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+            (it.applicationInfo!!.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
         } ?: false
 
         val rows = listOf(
