@@ -666,4 +666,5 @@
     <string name="apk_extract_saved">已保存到 %s</string>
     <string name="apk_extract_share_title">分享安裝包</string>
     <string name="apk_extract_failed">提取失敗</string>
+    <string name="apk_extract_load_failed">加載應用列表失敗</string>
 </resources>
