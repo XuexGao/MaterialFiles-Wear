@@ -66,7 +66,7 @@ class ImageViewerAdapter(
         binding.errorText.setOnClickListener(listener)
         // Double tapping and dragging up/down adjusts the zoom continuously, matching the quick
         // scale gesture of SubsamplingScaleImageView.
-        binding.image.installImageGestures(listener) {
+        binding.image.installImageGestures({ listener(it) }) {
             binding.image.canScrollHorizontally(it)
         }
         binding.largeImage.setOnClickListener(listener)
