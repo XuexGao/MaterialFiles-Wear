@@ -8,11 +8,11 @@ package me.zhanghai.android.files.apk
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -26,6 +26,7 @@ class ApkExtractActivity : AppActivity() {
     private lateinit var binding: ApkExtractActivityBinding
     private var searchItem: MenuItem? = null
     private var searchJob: Job? = null
+    private var currentFragment: Fragment? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +38,12 @@ class ApkExtractActivity : AppActivity() {
 
         val adapter = ApkPagerAdapter(this)
         binding.viewPager.adapter = adapter
+        binding.viewPager.registerOnPageChangeCallback(object :
+            ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                currentFragment = getCurrentFragment()
+            }
+        })
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
             tab.text = if (position == 0) {
                 getString(R.string.apk_extract_tab_user)
@@ -44,6 +51,11 @@ class ApkExtractActivity : AppActivity() {
                 getString(R.string.apk_extract_tab_system)
             }
         }.attach()
+        currentFragment = getCurrentFragment()
+    }
+
+    private fun getCurrentFragment(): Fragment? {
+        return supportFragmentManager.findFragmentByTag("f${binding.viewPager.currentItem}")
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -52,6 +64,7 @@ class ApkExtractActivity : AppActivity() {
         val searchView = searchItem?.actionView as? SearchView
         searchView?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String): Boolean {
+                searchJob?.cancel()
                 search(query)
                 return true
             }
@@ -88,9 +101,7 @@ class ApkExtractActivity : AppActivity() {
     }
 
     private fun search(query: String) {
-        val currentItem = binding.viewPager.currentItem
-        val tag = "f$currentItem"
-        val fragment = supportFragmentManager.findFragmentByTag(tag)
+        val fragment = currentFragment
         if (fragment is ApkListFragment && fragment.isAdded) {
             fragment.filter(query)
         }
