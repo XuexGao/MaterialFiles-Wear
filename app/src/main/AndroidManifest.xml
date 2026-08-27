@@ -252,6 +252,11 @@
             android:theme="@style/Theme.MaterialFiles" />
 
         <activity
+            android:name="me.zhanghai.android.files.apk.ApkExtractActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MaterialFiles" />
+
+        <activity
             android:name="me.zhanghai.android.files.settings.SettingsActivity"
             android:exported="true"
             android:label="@string/settings_title"

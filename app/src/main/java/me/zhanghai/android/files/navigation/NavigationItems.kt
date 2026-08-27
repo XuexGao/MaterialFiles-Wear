@@ -22,6 +22,7 @@ import me.zhanghai.android.files.compat.isPrimaryCompat
 import me.zhanghai.android.files.compat.pathCompat
 import me.zhanghai.android.files.file.JavaFile
 import me.zhanghai.android.files.file.asFileSize
+import me.zhanghai.android.files.apk.ApkExtractActivity
 import me.zhanghai.android.files.ftpserver.FtpServerActivity
 import me.zhanghai.android.files.settings.Settings
 import me.zhanghai.android.files.settings.SettingsActivity
@@ -53,6 +54,12 @@ val navigationItems: List<NavigationItem?>
                 IntentMenuItem(
                     R.drawable.shared_directory_icon_white_24dp, R.string.navigation_ftp_server,
                     FtpServerActivity::class.createIntent()
+                )
+            )
+            add(
+                IntentMenuItem(
+                    R.drawable.file_apk_icon, R.string.navigation_apk_extract,
+                    ApkExtractActivity::class.createIntent()
                 )
             )
             val standardDirectoryItems = standardDirectoryItems

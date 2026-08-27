@@ -538,10 +538,6 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 addBookmark()
                 true
             }
-            R.id.action_create_shortcut -> {
-                createShortcut()
-                true
-            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -1404,42 +1400,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         showToast(R.string.file_add_bookmark_success)
     }
 
-    override fun createShortcut(file: FileItem) {
-        createShortcut(file.path, file.mimeType)
-    }
 
-    private fun createShortcut() {
-        createShortcut(currentPath, MimeType.DIRECTORY)
-    }
-
-    private fun createShortcut(path: Path, mimeType: MimeType) {
-        val context = requireContext()
-        val isDirectory = mimeType == MimeType.DIRECTORY
-        val shortcutInfo = ShortcutInfoCompat.Builder(context, path.toString())
-            .setShortLabel(path.name)
-            .setIntent(
-                if (isDirectory) {
-                    FileListActivity.createViewIntent(path)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                } else {
-                    OpenFileActivity.createIntent(path, mimeType)
-                }
-            )
-            .setIcon(
-                IconCompat.createWithResource(
-                    context, if (isDirectory) {
-                        R.mipmap.directory_shortcut_icon
-                    } else {
-                        R.mipmap.file_shortcut_icon
-                    }
-                )
-            )
-            .build()
-        ShortcutManagerCompat.requestPinShortcut(context, shortcutInfo, null)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            showToast(R.string.shortcut_created)
-        }
-    }
 
     override fun showPropertiesDialog(file: FileItem) {
         FilePropertiesDialogFragment.show(file, this)

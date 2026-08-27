@@ -377,10 +377,6 @@ class FileListAdapter(
                     listener.addBookmark(file)
                     true
                 }
-                R.id.action_create_shortcut -> {
-                    listener.createShortcut(file)
-                    true
-                }
                 R.id.action_properties -> {
                     listener.showPropertiesDialog(file)
                     true
@@ -481,7 +477,6 @@ class FileListAdapter(
         fun shareFile(file: FileItem)
         fun copyPath(file: FileItem)
         fun addBookmark(file: FileItem)
-        fun createShortcut(file: FileItem)
         fun showPropertiesDialog(file: FileItem)
     }
 }
