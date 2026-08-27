@@ -18,6 +18,7 @@ import me.zhanghai.android.files.theme.night.NightMode
 import me.zhanghai.android.files.theme.night.NightModeHelper
 import me.zhanghai.android.files.ui.PreferenceFragmentCompat
 import me.zhanghai.android.files.tools.ToolsListActivity
+import me.zhanghai.android.files.ui.FontScaleHelper
 import me.zhanghai.android.files.ui.UiScaleHelper
 import me.zhanghai.android.files.util.createIntent
 import me.zhanghai.android.files.util.startActivitySafe
@@ -61,6 +62,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
         Settings.NIGHT_MODE.observe(viewLifecycleOwner, this::onNightModeChanged)
         Settings.BLACK_NIGHT_MODE.observe(viewLifecycleOwner, this::onBlackNightModeChanged)
         Settings.UI_SCALE.observe(viewLifecycleOwner, this::onUiScaleChanged)
+        Settings.FONT_SCALE.observe(viewLifecycleOwner, this::onFontScaleChanged)
 
         preferenceScreen.findPreference<Preference>(getString(R.string.pref_key_tools))!!
             .setOnPreferenceClickListener {
@@ -102,6 +104,10 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
 
     private fun onUiScaleChanged(uiScale: Int) {
         UiScaleHelper.sync()
+    }
+
+    private fun onFontScaleChanged(fontScale: Int) {
+        FontScaleHelper.sync()
     }
 
     override fun onResume() {

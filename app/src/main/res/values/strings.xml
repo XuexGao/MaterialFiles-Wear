@@ -750,6 +750,16 @@
     <string name="settings_ui_scale_title">UI scale</string>
     <string name="settings_ui_scale_summary">Shrink or enlarge the entire interface as a percentage, for small watch screens</string>
     <string name="settings_ui_scale_value_format">Current scale: %d%%</string>
+    <string name="settings_font_scale_title">Font scale</string>
+    <string name="settings_font_scale_summary">Scale text on top of the system font size</string>
+    <string-array name="settings_font_scale_entries">
+        <item>80%</item>
+        <item>90%</item>
+        <item>100%</item>
+        <item>110%</item>
+        <item>120%</item>
+        <item>130%</item>
+    </string-array>
     <string name="settings_file_list_animation_title">File list animation</string>
     <string name="settings_file_name_ellipsize_title">Display long file name</string>
     <string-array name="settings_file_name_ellipsize_entries">

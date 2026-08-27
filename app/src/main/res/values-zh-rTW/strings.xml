@@ -602,6 +602,8 @@
     <string name="settings_ui_scale_title">介面縮放</string>
     <string name="settings_ui_scale_summary">按百分比縮小或放大整個介面，適配小螢幕手錶</string>
     <string name="settings_ui_scale_value_format">目前縮放:%d%%</string>
+    <string name="settings_font_scale_title">字體縮放</string>
+    <string name="settings_font_scale_summary">在系統字體大小的基礎上調整應用內文字大小</string>
     <string name="settings_file_list_animation_title">檔案列表動畫</string>
     <string name="settings_file_name_ellipsize_title">顯示長檔案名稱</string>
     <string-array name="settings_file_name_ellipsize_entries">

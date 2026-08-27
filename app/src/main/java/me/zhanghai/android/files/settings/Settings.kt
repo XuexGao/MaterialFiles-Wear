@@ -127,6 +127,12 @@ object Settings {
     val UI_SCALE: SettingLiveData<Int> =
         IntegerSettingLiveData(R.string.pref_key_ui_scale, R.integer.pref_default_value_ui_scale)
 
+    /**
+     * The font scale in percent, applied on top of the system font scale. 100 means unscaled.
+     */
+    val FONT_SCALE: SettingLiveData<Int> =
+        IntegerSettingLiveData(R.string.pref_key_font_scale, R.integer.pref_default_value_font_scale)
+
     val FILE_LIST_ANIMATION: SettingLiveData<Boolean> =
         BooleanSettingLiveData(
             R.string.pref_key_file_list_animation, R.bool.pref_default_value_file_list_animation

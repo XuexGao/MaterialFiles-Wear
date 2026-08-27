@@ -13,6 +13,7 @@ import android.os.Environment
 import android.provider.Settings
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatDialogFragment
+import androidx.appcompat.widget.PopupMenu
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import coil.load
@@ -23,7 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.zhanghai.android.files.R
-import me.zhanghai.android.files.coil.AppIconPackageName
+import me.zhanghai.android.files.coil.LargeAppIconPackageName
 import me.zhanghai.android.files.coil.ignoreError
 import me.zhanghai.android.files.compat.getDrawableCompat
 import me.zhanghai.android.files.compat.longVersionCodeCompat
@@ -58,9 +59,7 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
         binding = DialogApkInfoBinding.inflate(layoutInflater)
         populateViews()
         return MaterialAlertDialogBuilder(requireContext(), theme)
-            .setTitle(entry.label)
             .setView(binding.root)
-            .setNegativeButton(R.string.apk_extract_more) { _, _ -> showMoreMenu() }
             .setPositiveButton(R.string.apk_extract_action_extract) { _, _ -> extractApk(entry) }
             .create()
     }
@@ -79,8 +78,9 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
             null
         }
 
+        binding.appName.text = entry.label
         val placeholder = context.getDrawableCompat(R.drawable.file_apk_icon)
-        binding.icon.load(AppIconPackageName(entry.packageName)) {
+        binding.icon.load(LargeAppIconPackageName(entry.packageName)) {
             placeholder(placeholder)
             ignoreError()
         }
@@ -122,53 +122,67 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
             row.findViewById<TextView>(R.id.value).text = value
             infoList.addView(row)
         }
+
+        binding.btnMore.setOnClickListener { anchor -> showMoreMenu(anchor) }
     }
 
-    private fun showMoreMenu() {
-        val items = arrayOf(
-            getString(R.string.apk_extract_menu_launch),
-            getString(R.string.apk_extract_menu_details),
-            getString(R.string.apk_extract_menu_uninstall)
-        )
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(entry.label)
-            .setItems(items) { _, which ->
-                when (which) {
-                    0 -> launchApp(entry.packageName)
-                    1 -> openAppDetails(entry.packageName)
-                    2 -> uninstallApp(entry.packageName)
-                }
+    /**
+     * Shows an anchored popup menu like the one in the top-right corner of the main screen, with
+     * launch, details and uninstall actions.
+     */
+    private fun showMoreMenu(anchor: android.view.View) {
+        val context = anchor.context
+        val popup = PopupMenu(context, anchor)
+        popup.menu.add(0, MENU_LAUNCH, 0, R.string.apk_extract_menu_launch)
+        popup.menu.add(0, MENU_DETAILS, 1, R.string.apk_extract_menu_details)
+        popup.menu.add(0, MENU_UNINSTALL, 2, R.string.apk_extract_menu_uninstall)
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                MENU_LAUNCH -> launchApp()
+                MENU_DETAILS -> openAppDetails()
+                MENU_UNINSTALL -> uninstallApp()
             }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+            true
+        }
+        popup.show()
     }
 
-    private fun launchApp(packageName: String) {
-        val intent = requireContext().packageManager.getLaunchIntentForPackage(packageName)
-        if (intent != null) {
-            startActivitySafe(intent)
-        } else {
+    private fun launchApp() {
+        val context = requireContext().applicationContext
+        try {
+            val intent = context.packageManager.getLaunchIntentForPackage(entry.packageName)
+            if (intent != null) {
+                startActivitySafe(intent)
+            } else {
+                showToast(R.string.apk_extract_launch_failed)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
             showToast(R.string.apk_extract_launch_failed)
         }
     }
 
-    private fun openAppDetails(packageName: String) {
+    private fun openAppDetails() {
         try {
             val intent = Intent(
                 Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.fromParts("package", packageName, null)
+                Uri.fromParts("package", entry.packageName, null)
             )
             startActivitySafe(intent)
         } catch (e: Exception) {
+            e.printStackTrace()
             showToast(R.string.apk_extract_open_details_failed)
         }
     }
 
-    private fun uninstallApp(packageName: String) {
+    private fun uninstallApp() {
         try {
-            val intent = Intent(Intent.ACTION_DELETE, Uri.fromParts("package", packageName, null))
+            val intent = Intent(
+                Intent.ACTION_DELETE, Uri.fromParts("package", entry.packageName, null)
+            )
             startActivitySafe(intent)
         } catch (e: Exception) {
+            e.printStackTrace()
             showToast(R.string.apk_extract_uninstall_failed)
         }
     }
@@ -220,6 +234,10 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
         private const val ARG_APK_SIZE = "apk_size"
         private const val ARG_SOURCE_DIR = "source_dir"
         private val UNSAFE_FILE_NAME_CHARS = Regex("[\\\\/:*?\"<>|\\u0000]")
+
+        private const val MENU_LAUNCH = 1
+        private const val MENU_DETAILS = 2
+        private const val MENU_UNINSTALL = 3
 
         fun newInstance(entry: AppEntry): ApkInfoDialogFragment {
             return ApkInfoDialogFragment().apply {

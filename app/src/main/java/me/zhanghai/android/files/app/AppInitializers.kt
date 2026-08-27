@@ -23,6 +23,7 @@ import me.zhanghai.android.files.storage.StorageVolumeListLiveData
 import me.zhanghai.android.files.storage.WebDavServerAuthenticator
 import me.zhanghai.android.files.theme.custom.CustomThemeHelper
 import me.zhanghai.android.files.theme.night.NightModeHelper
+import me.zhanghai.android.files.ui.FontScaleHelper
 import me.zhanghai.android.files.ui.UiScaleHelper
 import java.util.Properties
 import me.zhanghai.android.files.provider.ftp.client.Client as FtpClient
@@ -101,6 +102,7 @@ private fun initializeNightMode() {
 
 private fun initializeUiScale() {
     UiScaleHelper.initialize(application)
+    FontScaleHelper.initialize(application)
 }
 
 private fun createNotificationChannels() {

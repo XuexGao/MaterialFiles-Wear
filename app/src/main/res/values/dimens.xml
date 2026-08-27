@@ -22,6 +22,7 @@
     <dimen name="dialog_padding_minus_4dp">20dp</dimen>
     <dimen name="dialog_padding_minus_6dp">18dp</dimen>
     <dimen name="dialog_padding_minus_7dp">17dp</dimen>
+    <dimen name="dialog_padding_minus_12dp">12dp</dimen>
     <dimen name="dialog_padding_minus_16dp">8dp</dimen>
     <dimen name="navigation_max_width">320dp</dimen>
     <dimen name="navigation_header_height">172dp</dimen>
@@ -43,6 +44,7 @@
     <dimen name="touch_target_large_icon_padding">4dp</dimen>
     <dimen name="badge_size">18dp</dimen>
     <dimen name="badge_size_plus_1dp">19dp</dimen>
+    <dimen name="large_app_icon_size">56dp</dimen>
 
     <dimen name="file_list_toolbar_padding_start">8dp</dimen>
     <dimen name="file_list_toolbar_padding_end_no_overflow">14dp</dimen>
