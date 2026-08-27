@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
 import me.zhanghai.android.files.R
+import me.zhanghai.android.files.apk.ui.ApkListFragment
 import me.zhanghai.android.files.app.AppActivity
 import me.zhanghai.android.files.databinding.ApkExtractActivityBinding
 

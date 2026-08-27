@@ -16,7 +16,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import me.zhanghai.android.files.R
 import me.zhanghai.android.files.databinding.ApkAppItemBinding
-import me.zhanghai.android.files.util.getExtra
 import java.io.File
 
 class ApkListFragment : Fragment(R.layout.apk_app_list) {
