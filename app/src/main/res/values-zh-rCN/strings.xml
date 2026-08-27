@@ -668,4 +668,5 @@
     <string name="apk_extract_failed">提取失败</string>
     <string name="apk_extract_load_failed">加载应用列表失败</string>
     <string name="exit">退出</string>
+    <string name="apk_extract_title">安装包提取</string>
 </resources>
