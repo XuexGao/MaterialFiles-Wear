@@ -12,6 +12,7 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.text.TextUtils
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
@@ -87,10 +88,18 @@ abstract class MaterialPreferenceDialogFragmentCompat : AppCompatDialogFragment(
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         whichButtonClicked = DialogInterface.BUTTON_NEGATIVE
-        // The dialog context is additionally scaled by the dialog scale setting, so that dialogs
-        // can be shrunk further than the activity UI scale on small watch screens.
-        val dialogContext = DialogScaleHelper.wrapContext(requireContext())
-        val dialog = MaterialAlertDialogBuilder(dialogContext, theme)
+        return try {
+            // The dialog context is additionally scaled by the dialog scale setting, so that
+            // dialogs can be shrunk further than the activity UI scale on small watch screens.
+            createDialog(DialogScaleHelper.wrapContext(requireContext()))
+        } catch (e: Exception) {
+            Log.e("MaterialPreferenceDialog", "Failed to build the scaled dialog", e)
+            createDialog(requireContext())
+        }
+    }
+
+    private fun createDialog(context: Context): Dialog {
+        val dialog = MaterialAlertDialogBuilder(context, theme)
             .setTitle(dialogTitle)
             .setIcon(dialogIcon)
             .setPositiveButton(positiveButtonText, this)

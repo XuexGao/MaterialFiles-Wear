@@ -7,6 +7,7 @@ package me.zhanghai.android.files.ui
 
 import android.content.Context
 import android.content.res.Configuration
+import android.util.Log
 import me.zhanghai.android.files.R
 import me.zhanghai.android.files.app.application
 import me.zhanghai.android.files.app.defaultSharedPreferences
@@ -23,10 +24,17 @@ object DialogScaleHelper {
         if (scale == 1f) {
             return context
         }
-        val configuration = Configuration(context.resources.configuration)
-        val densityDpi = context.resources.displayMetrics.densityDpi
-        configuration.densityDpi = (densityDpi * scale).toInt().coerceIn(1, densityDpi)
-        return context.createConfigurationContext(configuration)
+        return try {
+            val configuration = Configuration(context.resources.configuration)
+            val densityDpi = context.resources.displayMetrics.densityDpi
+            configuration.densityDpi = (densityDpi * scale).toInt().coerceIn(1, densityDpi)
+            context.createConfigurationContext(configuration)
+        } catch (e: Exception) {
+            // Never let the dialog scale crash a dialog; log the cause and fall back to the
+            // unscaled context.
+            Log.e(TAG, "Failed to apply dialog scale $scale", e)
+            context
+        }
     }
 
     private val currentScale: Float
