@@ -41,11 +41,12 @@
 
     <!-- Launch theme for the launcher activity: keeps the launch screen dark so that opening the
          app doesn't flash a light screen when the app runs in night mode while the system stays
-         in day mode. windowDisablePreview removes the starting window before Android 12, while
-         windowSplashScreenBackground pins the Android 12+ splash to a fixed dark color since it
-         is otherwise resolved against the system (day) configuration. -->
+         in day mode. Both colors are explicit values instead of theme attributes, so the starting
+         window is resolved independently of the system (day) configuration without disabling it:
+         windowDisablePreview would suppress the launch screen entirely, leaving a blank gap
+         between tapping the icon and the first drawn frame. -->
     <style name="Theme.MaterialFiles.Launch" parent="Theme.MaterialFiles">
-        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowBackground">@color/color_surface_dark</item>
         <item name="android:windowSplashScreenBackground">@color/color_surface_dark</item>
     </style>
 

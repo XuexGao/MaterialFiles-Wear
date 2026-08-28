@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  ~ Copyright (c) 2025 XuexGao <MaterialFiles-Wear>
+  ~ All Rights Reserved.
+  -->
+
+<!-- Round launcher icon for adaptive-icon launchers (Android 8.0+): the transparent background
+     lets the rounded-square card in the foreground show through the circular mask, instead of
+     the regular icon's full-bleed background reading as a circle on round watch screens. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@android:color/transparent" />
+    <foreground android:drawable="@drawable/launcher_icon_round_foreground" />
+    <monochrome android:drawable="@drawable/launcher_icon_monochrome" />
+</adaptive-icon>

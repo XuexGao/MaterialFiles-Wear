@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  ~ Copyright (c) 2025 XuexGao <MaterialFiles-Wear>
+  ~ All Rights Reserved.
+  -->
+
+<!--
+  Foreground layer for the round launcher icon used on round screens like watches.
+
+  Adaptive icons are masked to a circle there, and the full-bleed background of the regular
+  launcher icon then reads as a plain circle. Drawing a rounded-square card inside the
+  transparent-background foreground instead keeps the app's rounded-square identity visible
+  within the circular mask. The 31dp insets keep the 46dp card (65dp diagonal) inside the 66dp
+  safe-zone circle of a 108dp adaptive icon canvas, and the artwork bitmap reuses the regular
+  foreground, whose folder spans 72% of its canvas, centered.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:bottom="31dp"
+        android:left="31dp"
+        android:right="31dp"
+        android:top="31dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/color_primary_light" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+    <item
+        android:bottom="31dp"
+        android:drawable="@mipmap/launcher_icon_foreground"
+        android:left="31dp"
+        android:right="31dp"
+        android:top="31dp" />
+</layer-list>
