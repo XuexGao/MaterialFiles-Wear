@@ -28,7 +28,7 @@
         <item name="colorSecondaryVariant">?colorSecondary</item>
         <item name="colorSurface">@color/color_surface</item>
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.MaterialFiles.MediumComponent</item>
-        <item name="buttonBarButtonStyle">@style/Widget.MaterialComponents.Button.TextButton.Dialog</item>
+        <item name="buttonBarButtonStyle">@style/Widget.MaterialFiles.Button.DialogButton</item>
         <item name="materialCardViewStyle">@style/Widget.MaterialFiles.CardView</item>
         <item name="navigationViewStyle">@style/Widget.MaterialFiles.NavigationView</item>
         <item name="switchPreferenceCompatStyle">@style/Preference.MaterialFiles.SwitchPreferenceCompat</item>
@@ -39,15 +39,17 @@
     </style>
     <style name="Theme.MaterialFiles" parent="Base.Theme.MaterialFiles" />
 
-    <!-- Launch theme for the launcher activity: keeps the launch screen dark so that opening the
-         app doesn't flash a light screen when the app runs in night mode while the system stays
-         in day mode. Both colors are explicit values instead of theme attributes, so the starting
-         window is resolved independently of the system (day) configuration without disabling it:
-         windowDisablePreview would suppress the launch screen entirely, leaving a blank gap
-         between tapping the icon and the first drawn frame. -->
+    <!-- Launch theme for the launcher activity. The starting window is drawn by the system from
+         this theme before any app code runs, so it can only follow the SYSTEM day/night
+         configuration: colorSurface resolves to the light surface in system day mode and to the
+         dark one through values-night in system night mode. An app-side night mode setting
+         cannot tint the starting window; AppActivity re-resolves the window background after
+         applying its own night mode instead. Explicit values keep the launch screen visible:
+         windowDisablePreview would suppress it entirely, leaving a blank gap between tapping
+         the icon and the first drawn frame. -->
     <style name="Theme.MaterialFiles.Launch" parent="Theme.MaterialFiles">
-        <item name="android:windowBackground">@color/color_surface_dark</item>
-        <item name="android:windowSplashScreenBackground">@color/color_surface_dark</item>
+        <item name="android:windowBackground">?attr/colorSurface</item>
+        <item name="android:windowSplashScreenBackground">?attr/colorSurface</item>
     </style>
 
     <style name="Platform.V21.Theme.MaterialFiles.Translucent" parent="Theme.MaterialFiles">
@@ -90,7 +92,7 @@
         <item name="colorSecondaryVariant">?colorSecondary</item>
         <item name="colorSurface">@color/color_surface_dark</item>
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.MaterialFiles.MediumComponent</item>
-        <item name="buttonBarButtonStyle">@style/Widget.MaterialComponents.Button.TextButton.Dialog</item>
+        <item name="buttonBarButtonStyle">@style/Widget.MaterialFiles.Button.DialogButton</item>
         <item name="materialCardViewStyle">@style/Widget.MaterialFiles.CardView</item>
         <item name="navigationViewStyle">@style/Widget.MaterialFiles.NavigationView</item>
         <item name="switchPreferenceCompatStyle">@style/Preference.MaterialFiles.SwitchPreferenceCompat</item>

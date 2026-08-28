@@ -57,6 +57,19 @@
         <item name="strokeWidth">@dimen/mtrl_btn_stroke_size</item>
     </style>
 
+    <!-- Dialog action buttons. The default Material dialog button reserves an 88dp minimum width,
+         so a three-button bar needs about 264dp, which doesn't fit the dialog window on small
+         watch screens; the button bar then stacks vertically and pushes the dialog content out
+         of view. Drop the minimum width and shrink the insets so that the buttons fit side by
+         side again. -->
+    <style name="Widget.MaterialFiles.Button.DialogButton" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:minWidth">0dp</item>
+        <item name="android:insetLeft">4dp</item>
+        <item name="android:insetRight">4dp</item>
+        <item name="android:paddingLeft">8dp</item>
+        <item name="android:paddingRight">8dp</item>
+    </style>
+
     <!-- See also ThemeOverlay.AppCompat.ActionBar . -->
     <style name="ThemeOverlay.MaterialFiles.ActionBar" parent="">
         <item name="colorControlNormal">?android:textColorPrimary</item>
