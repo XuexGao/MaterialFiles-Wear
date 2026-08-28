@@ -7,7 +7,6 @@ package me.zhanghai.android.files.viewer.video
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Matrix
 import android.graphics.SurfaceTexture
 import android.media.AudioManager
 import android.net.Uri
@@ -15,9 +14,11 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.Gravity
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.SeekBar
@@ -59,8 +60,6 @@ class VideoPlayerActivity : AppActivity() {
     private var surface: Surface? = null
 
     private var prepared = false
-    private var videoSarScaledWidth = 0f
-    private var videoHeight = 0
 
     private var resumePosition = 0L
     private var resumeByUser = false
@@ -229,17 +228,8 @@ class VideoPlayerActivity : AppActivity() {
             }
             false
         }
-        // The size is reported with the rotation of hardware-decoded streams already applied;
-        // sar_num/sar_den correct non-square pixel formats, which would otherwise stretch the
-        // picture even with a correct fit transform.
-        player.setOnVideoSizeChangedListener { _, width, height, sarNum, sarDen ->
-            videoSarScaledWidth =
-                if (width > 0 && height > 0 && sarNum > 0 && sarDen > 0) {
-                    width * sarNum.toFloat() / sarDen
-                } else {
-                    width.toFloat()
-                }
-            videoHeight = height
+        // The size is reported for the rotation-applied output of hardware-decoded streams.
+        player.setOnVideoSizeChangedListener { _, _, _, _, _ ->
             applyVideoScalingWhenLaidOut()
         }
 
@@ -268,45 +258,57 @@ class VideoPlayerActivity : AppActivity() {
     }
 
     /**
-     * The video size and the texture size can become known in either order, and TextureView only
-     * knows its size after the first layout pass, so the fit transform is (re-)applied whenever
-     * either side changes and deferred through the view tree when the view isn't laid out yet.
-     * Without this the texture would be stretched to fill the whole view regardless of the video
-     * aspect ratio.
+     * The video size and the screen size can become known in either order, so the video view is
+     * resized whenever either side changes and deferred through the view tree when the activity
+     * isn't laid out yet.
      */
     private fun applyVideoScalingWhenLaidOut() {
-        if (textureView.width > 0 && textureView.height > 0) {
+        if (root.width > 0 && root.height > 0) {
             applyVideoScaling()
         } else {
-            textureView.post { applyVideoScaling() }
+            root.post { applyVideoScaling() }
         }
     }
 
+    /**
+     * Sizes the texture view to the video's aspect ratio, exactly like BiliTerminal's
+     * changeVideoSize(): the surface is never stretched, because the view itself takes on the
+     * video's proportions within the screen instead of the texture being scaled with a matrix.
+     * A user-requested rotation re-fits the view to the rotated proportions and turns the view
+     * around its center, so a quarter turn fills the screen instead of spilling out of it.
+     */
     private fun applyVideoScaling() {
-        if (videoSarScaledWidth <= 0f || videoHeight <= 0f) {
+        val player = player ?: return
+        val videoWidth = player.videoWidth
+        val videoHeight = player.videoHeight
+        if (videoWidth == 0 || videoHeight == 0) {
             return
         }
-        val viewWidth = textureView.width
-        val viewHeight = textureView.height
-        if (viewWidth == 0 || viewHeight == 0) {
+        val screenWidth = root.width
+        val screenHeight = root.height
+        if (screenWidth == 0 || screenHeight == 0) {
             return
         }
-        // Fit the picture as it appears after the user-requested rotation, so that a quarter
-        // turn fills the view instead of spilling out of it.
         val quarterTurns = (videoRotationDegrees / 90f).toInt() % 4
-        val contentWidth = if (quarterTurns % 2 == 1) videoHeight.toFloat() else videoSarScaledWidth
-        val contentHeight =
-            if (quarterTurns % 2 == 1) videoSarScaledWidth else videoHeight.toFloat()
-        val scale = minOf(
-            viewWidth / contentWidth, viewHeight / contentHeight
-        )
-        val matrix = Matrix()
-        matrix.setScale(scale, scale, viewWidth / 2f, viewHeight / 2f)
-        if (videoRotationDegrees != 0f) {
-            matrix.postRotate(videoRotationDegrees, viewWidth / 2f, viewHeight / 2f)
+        val contentWidth = if (quarterTurns % 2 == 1) videoHeight else videoWidth
+        val contentHeight = if (quarterTurns % 2 == 1) videoWidth else videoHeight
+        // Contain-fit: either the video matches the screen height at a smaller width, or the
+        // screen width at a smaller height.
+        val widthAtScreenHeight = contentWidth * screenHeight / contentHeight
+        val heightAtScreenWidth = contentHeight * screenWidth / contentWidth
+        val videoViewWidth: Int
+        val videoViewHeight: Int
+        if (widthAtScreenHeight <= screenWidth) {
+            videoViewWidth = widthAtScreenHeight
+            videoViewHeight = screenHeight
+        } else {
+            videoViewWidth = screenWidth
+            videoViewHeight = heightAtScreenWidth
         }
-        textureView.setTransform(matrix)
-        textureView.invalidate()
+        textureView.layoutParams = FrameLayout.LayoutParams(
+            videoViewWidth, videoViewHeight, Gravity.CENTER
+        )
+        textureView.rotation = videoRotationDegrees
     }
 
     private fun togglePlayPause() {

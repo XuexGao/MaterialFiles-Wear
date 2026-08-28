@@ -134,6 +134,10 @@ class ImageViewerAdapter(
         })
 
         setOnTouchListener { view, motionEvent ->
+            // Installing this listener replaced the attacher's own one, so its events have to be
+            // forwarded explicitly; otherwise pinch zooming, panning and flinging would all be
+            // dead and only the custom quick scaling below would remain.
+            attacher.onTouch(view, motionEvent)
             when (motionEvent.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     downX = motionEvent.x
@@ -222,7 +226,9 @@ class ImageViewerAdapter(
                     }
                 }
             }
-            quickScaling
+            // Consuming everything keeps the event stream consistent for the attacher; page
+            // switching is negotiated through requestDisallowInterceptTouchEvent above.
+            true
         }
     }
 
