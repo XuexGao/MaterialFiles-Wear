@@ -37,6 +37,10 @@
 }
 -keepnames class me.zhanghai.android.files.** implements android.os.Parcelable
 
+# IjkMediaPlayer: the native code reads fields and calls back through annotations.
+-keep class tv.danmaku.ijk.media.player.** { *; }
+-dontwarn tv.danmaku.ijk.media.player.**
+
 # Apache FtpServer
 -keepclassmembers class * implements org.apache.mina.core.service.IoProcessor {
     public <init>(java.util.concurrent.ExecutorService);

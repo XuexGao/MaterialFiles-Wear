@@ -848,4 +848,10 @@
     <string name="apk_extract_info_uid">UID</string>
     <string name="apk_extract_more">More</string>
     <string name="apk_extract_action_extract">Extract APK</string>
+
+    <string name="video_player_title">Video player</string>
+    <string name="video_player_error">Playback failed</string>
+    <string name="video_player_rewind">-10s</string>
+    <string name="video_player_forward">+10s</string>
+    <string name="video_player_play_pause">Play or pause</string>
 </resources>

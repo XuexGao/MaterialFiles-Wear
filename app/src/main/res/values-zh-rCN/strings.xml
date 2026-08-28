@@ -683,4 +683,10 @@
     <string name="apk_extract_info_uid">UID</string>
     <string name="apk_extract_more">更多</string>
     <string name="apk_extract_action_extract">提取安装包</string>
+
+    <string name="video_player_title">视频播放器</string>
+    <string name="video_player_error">播放失败</string>
+    <string name="video_player_rewind">-10秒</string>
+    <string name="video_player_forward">+10秒</string>
+    <string name="video_player_play_pause">播放或暂停</string>
 </resources>

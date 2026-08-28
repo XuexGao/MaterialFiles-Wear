@@ -18,6 +18,7 @@ import me.zhanghai.android.files.provider.archive.isArchivePath
 import me.zhanghai.android.files.util.createViewIntent
 import me.zhanghai.android.files.util.extraPath
 import me.zhanghai.android.files.util.startActivitySafe
+import me.zhanghai.android.files.viewer.video.VideoPlayerActivity
 
 class OpenFileActivity : AppActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +36,10 @@ class OpenFileActivity : AppActivity() {
     private fun openFile(path: Path, mimeType: MimeType) {
         if (path.isArchivePath) {
             FileJobService.open(path, mimeType, false, this)
+        } else if (mimeType.type == "video") {
+            // Play videos with the built-in IjkMediaPlayer-based player instead of handing them
+            // to an external app, which usually doesn't fit watch screens.
+            startActivitySafe(VideoPlayerActivity.createIntent(this, path, mimeType))
         } else {
             val intent = path.fileProviderUri.createViewIntent(mimeType)
                 .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)

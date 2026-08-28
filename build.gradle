@@ -26,6 +26,9 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // ijkplayer (Bilibili's video player) was published to jcenter only, which is served by
+        // this mirror now.
+        maven { url 'https://maven.aliyun.com/repository/jcenter' }
     }
 }
 
