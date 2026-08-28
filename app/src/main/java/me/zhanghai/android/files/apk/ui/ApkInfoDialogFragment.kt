@@ -6,6 +6,7 @@
 package me.zhanghai.android.files.apk.ui
 
 import android.app.Dialog
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle

@@ -19,6 +19,8 @@ import me.zhanghai.android.files.app.defaultSharedPreferences
  * without a wrapped context simply follow the UI scale.
  */
 object DialogScaleHelper {
+    private const val TAG = "DialogScaleHelper"
+
     fun wrapContext(context: Context): Context {
         val scale = currentScale
         if (scale == 1f) {
