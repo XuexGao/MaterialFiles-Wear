@@ -63,6 +63,7 @@
         <activity
             android:name="me.zhanghai.android.files.filelist.FileListActivity"
             android:exported="true"
+            android:theme="@style/Theme.MaterialFiles.Launch"
             android:visibleToInstantApps="true"
             tools:ignore="UnusedAttribute">
             <intent-filter>
