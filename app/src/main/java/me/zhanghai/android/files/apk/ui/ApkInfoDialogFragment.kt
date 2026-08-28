@@ -60,7 +60,7 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
             createDialog(DialogScaleHelper.wrapContext(requireContext()))
         } catch (e: Exception) {
             Log.e("ApkInfoDialog", "Failed to build the scaled dialog", e)
-            createDialog(layoutInflater)
+            createDialog(requireContext())
         }
     }
 
