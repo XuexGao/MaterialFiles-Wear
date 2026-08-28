@@ -145,6 +145,16 @@
                 android:contentDescription="@string/video_player_volume_up"
                 android:scaleType="fitCenter"
                 android:src="@drawable/video_player_volume_up" />
+
+            <ImageButton
+                android:id="@+id/rotate"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/video_player_rotate"
+                android:scaleType="fitCenter"
+                android:src="@drawable/video_player_rotate" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

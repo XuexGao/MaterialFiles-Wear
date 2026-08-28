@@ -67,6 +67,9 @@ class VideoPlayerActivity : AppActivity() {
 
     private var controlsVisible = true
 
+    /** User-requested clockwise rotation of the picture, in degrees (0/90/180/270). */
+    private var videoRotationDegrees = 0f
+
     private val handler = Handler(Looper.getMainLooper())
     private val audioManager by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { }
@@ -137,6 +140,11 @@ class VideoPlayerActivity : AppActivity() {
             audioManager.adjustStreamVolume(
                 AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI
             )
+            scheduleControlsHide()
+        }
+        findViewById<ImageButton>(R.id.rotate).setOnClickListener {
+            videoRotationDegrees = (videoRotationDegrees + 90f) % 360f
+            applyVideoScalingWhenLaidOut()
             scheduleControlsHide()
         }
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -283,11 +291,20 @@ class VideoPlayerActivity : AppActivity() {
         if (viewWidth == 0 || viewHeight == 0) {
             return
         }
+        // Fit the picture as it appears after the user-requested rotation, so that a quarter
+        // turn fills the view instead of spilling out of it.
+        val quarterTurns = (videoRotationDegrees / 90f).toInt() % 4
+        val contentWidth = if (quarterTurns % 2 == 1) videoHeight.toFloat() else videoSarScaledWidth
+        val contentHeight =
+            if (quarterTurns % 2 == 1) videoSarScaledWidth else videoHeight.toFloat()
         val scale = minOf(
-            viewWidth / videoSarScaledWidth, viewHeight.toFloat() / videoHeight
+            viewWidth / contentWidth, viewHeight / contentHeight
         )
         val matrix = Matrix()
         matrix.setScale(scale, scale, viewWidth / 2f, viewHeight / 2f)
+        if (videoRotationDegrees != 0f) {
+            matrix.postRotate(videoRotationDegrees, viewWidth / 2f, viewHeight / 2f)
+        }
         textureView.setTransform(matrix)
         textureView.invalidate()
     }

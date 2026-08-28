@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  ~ Copyright (c) 2025 XuexGao <MaterialFiles-Wear>
+  ~ All Rights Reserved.
+  -->
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M15.55,5.55L11,1v3.07C7.06,4.56 4,7.92 4,12s3.05,7.44 7,7.95v-2.02c-2.84,-0.48 -5,-2.94 -5,-5.93s2.16,-5.45 5,-5.93V10l4.55,-4.45zM19.3,10.4c-0.24,-0.86 -0.63,-1.68 -1.14,-2.42l-1.46,1.46c0.32,0.51 0.56,1.06 0.74,1.65h1.86zM13.98,17.93v2.02c1.13,-0.16 2.19,-0.54 3.13,-1.12l-1.45,-1.45c-0.51,0.23 -1.08,0.43 -1.68,0.55zM17.7,13.65c-0.18,0.59 -0.42,1.14 -0.74,1.65l1.46,1.46c0.51,-0.73 0.9,-1.56 1.14,-2.42h-1.86z" />
+</vector>
