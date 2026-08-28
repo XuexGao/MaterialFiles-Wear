@@ -56,7 +56,7 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
         binding = DialogApkInfoBinding.inflate(layoutInflater)
         populateViews()
         return MaterialAlertDialogBuilder(
-            DialogScaleHelper.wrapDialogContext(requireContext()), theme
+            DialogScaleHelper.wrapContext(requireContext()), theme
         )
             .setView(binding.root)
             // The neutral button lands on the left of the dialog's button bar, like the overflow

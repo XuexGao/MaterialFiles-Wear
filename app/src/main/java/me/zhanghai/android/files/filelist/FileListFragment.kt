@@ -248,7 +248,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         // matches Material 3 Expressive palettes too.
         run {
             val typedArray = requireContext().obtainStyledAttributes(
-                intArrayOf(com.google.android.material.R.attr.colorPrimary)
+                intArrayOf(androidx.appcompat.R.attr.colorPrimary)
             )
             binding.swipeRefreshLayout.setColorSchemeColors(typedArray.getColor(0, 0))
             typedArray.recycle()

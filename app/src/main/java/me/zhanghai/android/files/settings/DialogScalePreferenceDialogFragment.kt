@@ -6,10 +6,12 @@
 package me.zhanghai.android.files.settings
 
 import android.os.Bundle
+import android.view.View
 import android.widget.SeekBar
 import android.widget.TextView
 import kotlinx.parcelize.Parcelize
 import me.zhanghai.android.files.R
+import me.zhanghai.android.files.ui.MaterialPreferenceDialogFragmentCompat
 import me.zhanghai.android.files.util.ParcelableState
 import me.zhanghai.android.files.util.getState
 import me.zhanghai.android.files.util.putState
