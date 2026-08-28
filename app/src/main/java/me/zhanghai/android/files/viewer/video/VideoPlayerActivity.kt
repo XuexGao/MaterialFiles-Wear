@@ -284,7 +284,7 @@ class VideoPlayerActivity : AppActivity() {
             return
         }
         val scale = minOf(
-            viewWidth / videoSarScaledWidth, viewHeight / videoHeight
+            viewWidth / videoSarScaledWidth, viewHeight.toFloat() / videoHeight
         )
         val matrix = Matrix()
         matrix.setScale(scale, scale, viewWidth / 2f, viewHeight / 2f)
