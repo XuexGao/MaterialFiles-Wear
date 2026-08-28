@@ -37,18 +37,18 @@ import me.zhanghai.android.files.util.showToast
  * A compact local video player, integrated from BiliTerminal's IjkMediaPlayer-based player
  * (https://github.com/PianoEthan/BiliTerminal) with its Bilibili-specific parts removed: no
  * danmaku and no subtitle tracks, no stream qualities or pages. Only what is needed to play a
- * local video file on a watch is kept: a fit-to-screen texture, a progress bar and play/pause
- * plus ±10 seconds buttons.
+ * local video file on a watch is kept: a fit-to-screen texture, an app bar with the file name,
+ * a progress bar and play/pause, ±10 seconds and volume buttons.
  */
 class VideoPlayerActivity : AppActivity() {
 
     private lateinit var uri: Uri
 
     private lateinit var root: View
+    private lateinit var appBarLayout: View
     private lateinit var textureView: TextureView
     private lateinit var loadingView: ProgressBar
     private lateinit var controlsView: View
-    private lateinit var titleView: TextView
     private lateinit var positionView: TextView
     private lateinit var durationView: TextView
     private lateinit var seekBar: SeekBar
@@ -59,8 +59,7 @@ class VideoPlayerActivity : AppActivity() {
     private var surface: Surface? = null
 
     private var prepared = false
-    private var renderingStarted = false
-    private var videoWidth = 0
+    private var videoSarScaledWidth = 0f
     private var videoHeight = 0
 
     private var resumePosition = 0L
@@ -70,6 +69,7 @@ class VideoPlayerActivity : AppActivity() {
 
     private val handler = Handler(Looper.getMainLooper())
     private val audioManager by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+    private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { }
 
     private val updateRunnable = object : Runnable {
         override fun run() {
@@ -97,18 +97,26 @@ class VideoPlayerActivity : AppActivity() {
         setContentView(R.layout.video_player_activity)
 
         root = findViewById(R.id.root)
+        appBarLayout = findViewById(R.id.appBarLayout)
         textureView = findViewById(R.id.texture)
         loadingView = findViewById(R.id.loading)
         controlsView = findViewById(R.id.controls)
-        titleView = findViewById(R.id.title)
         positionView = findViewById(R.id.position)
         durationView = findViewById(R.id.duration)
         seekBar = findViewById(R.id.seek_bar)
         playPauseButton = findViewById(R.id.play_pause)
 
         val path: Path? = intent.extraPath
-        titleView.text =
-            path?.fileName?.toString() ?: uri.lastPathSegment ?: getString(R.string.video_player_title)
+        val title = path?.fileName?.toString()
+            ?: uri.lastPathSegment
+            ?: getString(R.string.video_player_title)
+        setSupportActionBar(findViewById(R.id.toolbar))
+        supportActionBar?.let {
+            // The window background flashes otherwise; the app bar covers the content anyway.
+            it.setDisplayShowTitleEnabled(true)
+            it.title = title
+            it.setDisplayHomeAsUpEnabled(true)
+        }
 
         if (savedInstanceState != null) {
             resumePosition = savedInstanceState.getLong(EXTRA_POSITION)
@@ -119,6 +127,18 @@ class VideoPlayerActivity : AppActivity() {
         playPauseButton.setOnClickListener { togglePlayPause() }
         findViewById<TextView>(R.id.rewind).setOnClickListener { seekBy(-SEEK_STEP_MS) }
         findViewById<TextView>(R.id.forward).setOnClickListener { seekBy(SEEK_STEP_MS) }
+        findViewById<ImageButton>(R.id.volume_down).setOnClickListener {
+            audioManager.adjustStreamVolume(
+                AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI
+            )
+            scheduleControlsHide()
+        }
+        findViewById<ImageButton>(R.id.volume_up).setOnClickListener {
+            audioManager.adjustStreamVolume(
+                AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI
+            )
+            scheduleControlsHide()
+        }
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
@@ -137,10 +157,11 @@ class VideoPlayerActivity : AppActivity() {
                 surface?.release()
                 surface = Surface(st)
                 player?.setSurface(surface)
+                applyVideoScalingWhenLaidOut()
             }
 
             override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, width: Int, height: Int) {
-                applyVideoScaling()
+                applyVideoScalingWhenLaidOut()
             }
 
             override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
@@ -196,15 +217,22 @@ class VideoPlayerActivity : AppActivity() {
         }
         player.setOnInfoListener { _, what, _ ->
             if (what == IMediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
-                renderingStarted = true
                 loadingView.visibility = View.GONE
             }
             false
         }
-        player.setOnVideoSizeChangedListener { _, width, height, _, _ ->
-            videoWidth = width
+        // The size is reported with the rotation of hardware-decoded streams already applied;
+        // sar_num/sar_den correct non-square pixel formats, which would otherwise stretch the
+        // picture even with a correct fit transform.
+        player.setOnVideoSizeChangedListener { _, width, height, sarNum, sarDen ->
+            videoSarScaledWidth =
+                if (width > 0 && height > 0 && sarNum > 0 && sarDen > 0) {
+                    width * sarNum.toFloat() / sarDen
+                } else {
+                    width.toFloat()
+                }
             videoHeight = height
-            applyVideoScaling()
+            applyVideoScalingWhenLaidOut()
         }
 
         surface?.let { player.setSurface(it) }
@@ -227,11 +255,27 @@ class VideoPlayerActivity : AppActivity() {
         if (resumePosition > 0) {
             mp.seekTo(resumePosition)
         }
+        applyVideoScalingWhenLaidOut()
         startOrResume()
     }
 
+    /**
+     * The video size and the texture size can become known in either order, and TextureView only
+     * knows its size after the first layout pass, so the fit transform is (re-)applied whenever
+     * either side changes and deferred through the view tree when the view isn't laid out yet.
+     * Without this the texture would be stretched to fill the whole view regardless of the video
+     * aspect ratio.
+     */
+    private fun applyVideoScalingWhenLaidOut() {
+        if (textureView.width > 0 && textureView.height > 0) {
+            applyVideoScaling()
+        } else {
+            textureView.post { applyVideoScaling() }
+        }
+    }
+
     private fun applyVideoScaling() {
-        if (videoWidth <= 0 || videoHeight <= 0) {
+        if (videoSarScaledWidth <= 0f || videoHeight <= 0f) {
             return
         }
         val viewWidth = textureView.width
@@ -240,11 +284,12 @@ class VideoPlayerActivity : AppActivity() {
             return
         }
         val scale = minOf(
-            viewWidth.toFloat() / videoWidth, viewHeight.toFloat() / videoHeight
+            viewWidth / videoSarScaledWidth, viewHeight / videoHeight
         )
         val matrix = Matrix()
         matrix.setScale(scale, scale, viewWidth / 2f, viewHeight / 2f)
         textureView.setTransform(matrix)
+        textureView.invalidate()
     }
 
     private fun togglePlayPause() {
@@ -314,6 +359,7 @@ class VideoPlayerActivity : AppActivity() {
     private fun setControlsVisible(visible: Boolean) {
         controlsVisible = visible
         controlsView.visibility = if (visible) View.VISIBLE else View.GONE
+        appBarLayout.visibility = if (visible) View.VISIBLE else View.GONE
         if (visible) {
             scheduleControlsHide()
         } else {
@@ -330,8 +376,6 @@ class VideoPlayerActivity : AppActivity() {
 
     private val isPlaying: Boolean
         get() = prepared && player?.isPlaying == true
-
-    private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { }
 
     private fun requestAudioFocus() {
         @Suppress("DEPRECATION")
@@ -379,11 +423,6 @@ class VideoPlayerActivity : AppActivity() {
         parcelFileDescriptor?.let { runCatching { it.close() } }
         parcelFileDescriptor = null
         abandonAudioFocus()
-    }
-
-    override fun onBackPressed() {
-        resumePosition = player?.currentPosition ?: 0L
-        super.onBackPressed()
     }
 
     private fun formatDuration(durationMs: Long): String {

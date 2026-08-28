@@ -689,4 +689,6 @@
     <string name="video_player_rewind">-10秒</string>
     <string name="video_player_forward">+10秒</string>
     <string name="video_player_play_pause">播放或暂停</string>
+    <string name="video_player_volume_down">减小音量</string>
+    <string name="video_player_volume_up">增大音量</string>
 </resources>

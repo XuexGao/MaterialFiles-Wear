@@ -132,6 +132,7 @@ import me.zhanghai.android.files.util.viewModels
 import me.zhanghai.android.files.util.withChooser
 import me.zhanghai.android.files.viewer.image.ImageViewerActivity
 import me.zhanghai.android.files.viewer.text.TextEditorActivity
+import me.zhanghai.android.files.viewer.video.VideoPlayerActivity
 import kotlin.math.roundToInt
 
 class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.Listener,
@@ -1285,6 +1286,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 val viewerActivityClass = when {
                     mimeType.isText -> TextEditorActivity::class
                     mimeType.isImage -> ImageViewerActivity::class
+                    mimeType.isVideo -> VideoPlayerActivity::class
                     else -> null
                 }
                 if (viewerActivityClass != null) {

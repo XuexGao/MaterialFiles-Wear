@@ -854,4 +854,6 @@
     <string name="video_player_rewind">-10s</string>
     <string name="video_player_forward">+10s</string>
     <string name="video_player_play_pause">Play or pause</string>
+    <string name="video_player_volume_down">Volume down</string>
+    <string name="video_player_volume_up">Volume up</string>
 </resources>
