@@ -33,7 +33,7 @@
                 android:id="@+id/appName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                android:textAppearance="?attr/textAppearanceHeadlineMedium"
                 android:textColor="?android:textColorPrimary"
                 android:maxLines="1"
                 android:ellipsize="end" />
@@ -43,7 +43,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:textAppearance="?attr/textAppearanceTitleLarge"
                 android:textColor="?android:textColorSecondary"
                 android:maxLines="1"
                 android:ellipsize="end" />
