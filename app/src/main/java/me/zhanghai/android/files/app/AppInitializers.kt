@@ -43,8 +43,22 @@ val appInitializers = listOf(
     ::initializeCustomTheme,
     ::initializeNightMode,
     ::initializeUiScale,
+    ::cleanupOpenCache,
     ::createNotificationChannels
 )
+
+/**
+ * Deletes the copies that opening files with external apps left in the open cache; they are
+ * only needed while the external app reads them and would otherwise pile up forever.
+ */
+private fun cleanupOpenCache() {
+    AsyncTask.execute {
+        val openCache = java.io.File(application.cacheDir, "open_cache")
+        if (openCache.isDirectory) {
+            openCache.listFiles()?.forEach { it.deleteRecursively() }
+        }
+    }
+}
 
 private fun initializeCrashLogger() {
     CrashLogger.initialize(application)

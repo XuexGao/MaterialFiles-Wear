@@ -5,12 +5,15 @@
 
 package me.zhanghai.android.files.ui
 
+import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
 import android.util.Log
+import android.view.ContextThemeWrapper
 import me.zhanghai.android.files.R
 import me.zhanghai.android.files.app.application
 import me.zhanghai.android.files.app.defaultSharedPreferences
+import me.zhanghai.android.files.compat.themeResIdCompat
 
 /**
  * Scales dialogs independently of the activity UI scale, so that dialogs can be shrunk further
@@ -30,7 +33,16 @@ object DialogScaleHelper {
             val configuration = Configuration(context.resources.configuration)
             val densityDpi = context.resources.displayMetrics.densityDpi
             configuration.densityDpi = (densityDpi * scale).toInt().coerceIn(1, densityDpi)
-            context.createConfigurationContext(configuration)
+            val configurationContext = context.createConfigurationContext(configuration)
+            // A configuration context does not inherit the activity's theme, and Material
+            // dialogs crash without it ("requires your app theme to be Theme.AppCompat"), so
+            // reapply the theme the activity actually uses.
+            val themeRes = (context as? Activity)?.themeResIdCompat ?: 0
+            if (themeRes != 0) {
+                ContextThemeWrapper(configurationContext, themeRes)
+            } else {
+                configurationContext
+            }
         } catch (e: Exception) {
             // Never let the dialog scale crash a dialog; log the cause and fall back to the
             // unscaled context.
