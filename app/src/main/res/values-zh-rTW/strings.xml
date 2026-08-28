@@ -691,5 +691,6 @@
     <string name="video_player_play_pause">播放或暫停</string>
     <string name="video_player_volume_down">減小音量</string>
     <string name="video_player_volume_up">增大音量</string>
+    <string name="video_player_volume_format">音量：%1$d%%</string>
     <string name="video_player_rotate">旋轉畫面</string>
 </resources>

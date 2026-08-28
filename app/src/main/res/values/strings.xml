@@ -856,5 +856,6 @@
     <string name="video_player_play_pause">Play or pause</string>
     <string name="video_player_volume_down">Volume down</string>
     <string name="video_player_volume_up">Volume up</string>
+    <string name="video_player_volume_format">Volume: %1$d%%</string>
     <string name="video_player_rotate">Rotate the picture</string>
 </resources>

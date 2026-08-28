@@ -24,6 +24,20 @@
         android:layout_gravity="center"
         android:indeterminate="true" />
 
+    <TextView
+        android:id="@+id/volume_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="#80000000"
+        android:paddingStart="16dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="8dp"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:visibility="gone" />
+
     <!-- The app bar and the controls bar share the styling of the other viewers. -->
     <FrameLayout
         android:id="@+id/appBarLayout"

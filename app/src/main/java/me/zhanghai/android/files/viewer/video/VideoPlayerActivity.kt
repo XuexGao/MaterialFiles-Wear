@@ -7,14 +7,18 @@ package me.zhanghai.android.files.viewer.video
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.SurfaceTexture
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.GestureDetector
 import android.view.Gravity
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
@@ -24,6 +28,7 @@ import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.TextView
 import java8.nio.file.Path
+import kotlin.math.abs
 import tv.danmaku.ijk.media.player.IMediaPlayer
 import tv.danmaku.ijk.media.player.IjkMediaPlayer
 import me.zhanghai.android.files.R
@@ -37,9 +42,9 @@ import me.zhanghai.android.files.util.showToast
 /**
  * A compact local video player, integrated from BiliTerminal's IjkMediaPlayer-based player
  * (https://github.com/PianoEthan/BiliTerminal) with its Bilibili-specific parts removed: no
- * danmaku and no subtitle tracks, no stream qualities or pages. Only what is needed to play a
- * local video file on a watch is kept: a fit-to-screen texture, an app bar with the file name,
- * a progress bar and play/pause, ±10 seconds and volume buttons.
+ * danmaku and no subtitle tracks, no stream qualities or pages. Kept from it are the engine
+ * options, the fit-to-screen video sizing, the landscape/portrait rotate button, the volume
+ * percentage overlay and the pinch-to-zoom gestures with double tap seek and reset.
  */
 class VideoPlayerActivity : AppActivity() {
 
@@ -50,6 +55,7 @@ class VideoPlayerActivity : AppActivity() {
     private lateinit var textureView: TextureView
     private lateinit var loadingView: ProgressBar
     private lateinit var controlsView: View
+    private lateinit var volumeLabel: TextView
     private lateinit var positionView: TextView
     private lateinit var durationView: TextView
     private lateinit var seekBar: SeekBar
@@ -60,14 +66,12 @@ class VideoPlayerActivity : AppActivity() {
     private var surface: Surface? = null
 
     private var prepared = false
+    private var landscape = false
 
     private var resumePosition = 0L
     private var resumeByUser = false
 
     private var controlsVisible = true
-
-    /** User-requested clockwise rotation of the picture, in degrees (0/90/180/270). */
-    private var videoRotationDegrees = 0f
 
     private val handler = Handler(Looper.getMainLooper())
     private val audioManager by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -84,6 +88,10 @@ class VideoPlayerActivity : AppActivity() {
         if (isPlaying) {
             setControlsVisible(false)
         }
+    }
+
+    private val hideVolumeRunnable = Runnable {
+        volumeLabel.visibility = View.GONE
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -103,6 +111,7 @@ class VideoPlayerActivity : AppActivity() {
         textureView = findViewById(R.id.texture)
         loadingView = findViewById(R.id.loading)
         controlsView = findViewById(R.id.controls)
+        volumeLabel = findViewById(R.id.volume_label)
         positionView = findViewById(R.id.position)
         durationView = findViewById(R.id.duration)
         seekBar = findViewById(R.id.seek_bar)
@@ -114,8 +123,6 @@ class VideoPlayerActivity : AppActivity() {
             ?: getString(R.string.video_player_title)
         setSupportActionBar(findViewById(R.id.toolbar))
         supportActionBar?.let {
-            // The window background flashes otherwise; the app bar covers the content anyway.
-            it.setDisplayShowTitleEnabled(true)
             it.title = title
             it.setDisplayHomeAsUpEnabled(true)
         }
@@ -125,26 +132,20 @@ class VideoPlayerActivity : AppActivity() {
             resumeByUser = false
         }
 
-        root.setOnClickListener { toggleControls() }
         playPauseButton.setOnClickListener { togglePlayPause() }
         findViewById<TextView>(R.id.rewind).setOnClickListener { seekBy(-SEEK_STEP_MS) }
         findViewById<TextView>(R.id.forward).setOnClickListener { seekBy(SEEK_STEP_MS) }
-        findViewById<ImageButton>(R.id.volume_down).setOnClickListener {
-            audioManager.adjustStreamVolume(
-                AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI
-            )
-            scheduleControlsHide()
-        }
-        findViewById<ImageButton>(R.id.volume_up).setOnClickListener {
-            audioManager.adjustStreamVolume(
-                AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI
-            )
-            scheduleControlsHide()
-        }
+        findViewById<ImageButton>(R.id.volume_down).setOnClickListener { changeVolume(false) }
+        findViewById<ImageButton>(R.id.volume_up).setOnClickListener { changeVolume(true) }
         findViewById<ImageButton>(R.id.rotate).setOnClickListener {
-            videoRotationDegrees = (videoRotationDegrees + 90f) % 360f
-            applyVideoScalingWhenLaidOut()
-            scheduleControlsHide()
+            // Like BiliTerminal's rotate button: switch between portrait and landscape watching;
+            // the video is refitted to the new screen proportions in onConfigurationChanged().
+            landscape = !landscape
+            requestedOrientation = if (landscape) {
+                ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            } else {
+                ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            }
         }
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
@@ -159,29 +160,110 @@ class VideoPlayerActivity : AppActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar) {}
         })
 
-        textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-            override fun onSurfaceTextureAvailable(st: SurfaceTexture, width: Int, height: Int) {
-                surface?.release()
-                surface = Surface(st)
-                player?.setSurface(surface)
-                applyVideoScalingWhenLaidOut()
+        // Refit the video whenever the screen proportions change.
+        root.addOnLayoutChangeListener { _, left, top, right, bottom,
+            oldLeft, oldTop, oldRight, oldBottom ->
+            if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) {
+                applyVideoScaling()
             }
-
-            override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, width: Int, height: Int) {
-                applyVideoScalingWhenLaidOut()
-            }
-
-            override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
-                player?.setSurface(null)
-                surface?.release()
-                surface = null
-                return true
-            }
-
-            override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
         }
 
+        installVideoGestures()
+
         startPlayback()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        applyVideoScalingWhenLaidOut()
+    }
+
+    /**
+     * The gestures of the video area, mirroring BiliTerminal's setVideoGestures():
+     * * Pinching zooms the picture between 1x and 5x, and dragging pans it while zoomed in.
+     * * Double tapping the left or right third seeks ten seconds back or forward.
+     * * Double tapping the middle resets the zoom, or toggles playback when not zoomed in.
+     * * A single tap toggles the controls.
+     */
+    private fun installVideoGestures() {
+        val gestureDetector = GestureDetector(
+            this,
+            object : GestureDetector.SimpleOnGestureListener() {
+                override fun onSingleTapConfirmed(motionEvent: MotionEvent): Boolean {
+                    toggleControls()
+                    return true
+                }
+
+                override fun onDoubleTap(motionEvent: MotionEvent): Boolean {
+                    if (!prepared) {
+                        return false
+                    }
+                    when {
+                        motionEvent.x < root.width / 3f -> seekBy(-SEEK_STEP_MS)
+                        motionEvent.x > root.width * 2f / 3f -> seekBy(SEEK_STEP_MS)
+                        textureView.scaleX > 1f -> resetVideoZoom()
+                        else -> togglePlayPause()
+                    }
+                    return true
+                }
+            }
+        )
+        val scaleGestureDetector = ScaleGestureDetector(
+            this,
+            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    val newScale = (textureView.scaleX * detector.scaleFactor).coerceIn(1f, MAX_SCALE)
+                    textureView.scaleX = newScale
+                    textureView.scaleY = newScale
+                    clampVideoTranslation()
+                    return true
+                }
+            }
+        )
+
+        var lastX = 0f
+        var lastY = 0f
+
+        root.setOnTouchListener { _, motionEvent ->
+            gestureDetector.onTouchEvent(motionEvent)
+            scaleGestureDetector.onTouchEvent(motionEvent)
+            when (motionEvent.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    lastX = motionEvent.x
+                    lastY = motionEvent.y
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (textureView.scaleX > 1f && !scaleGestureDetector.isInProgress) {
+                        val deltaX = motionEvent.x - lastX
+                        val deltaY = motionEvent.y - lastY
+                        if (abs(deltaX) > 1f || abs(deltaY) > 1f) {
+                            textureView.translationX += deltaX
+                            textureView.translationY += deltaY
+                            clampVideoTranslation()
+                            lastX = motionEvent.x
+                            lastY = motionEvent.y
+                        }
+                    }
+                }
+            }
+            true
+        }
+    }
+
+    private fun clampVideoTranslation() {
+        val maxTranslationX = textureView.width * (textureView.scaleX - 1f) / 2f
+        val maxTranslationY = textureView.height * (textureView.scaleY - 1f) / 2f
+        textureView.translationX =
+            textureView.translationX.coerceIn(-maxTranslationX, maxTranslationX)
+        textureView.translationY =
+            textureView.translationY.coerceIn(-maxTranslationY, maxTranslationY)
+    }
+
+    private fun resetVideoZoom() {
+        textureView.scaleX = 1f
+        textureView.scaleY = 1f
+        textureView.translationX = 0f
+        textureView.translationY = 0f
     }
 
     private fun startPlayback() {
@@ -228,7 +310,6 @@ class VideoPlayerActivity : AppActivity() {
             }
             false
         }
-        // The size is reported for the rotation-applied output of hardware-decoded streams.
         player.setOnVideoSizeChangedListener { _, _, _, _, _ ->
             applyVideoScalingWhenLaidOut()
         }
@@ -274,8 +355,7 @@ class VideoPlayerActivity : AppActivity() {
      * Sizes the texture view to the video's aspect ratio, exactly like BiliTerminal's
      * changeVideoSize(): the surface is never stretched, because the view itself takes on the
      * video's proportions within the screen instead of the texture being scaled with a matrix.
-     * A user-requested rotation re-fits the view to the rotated proportions and turns the view
-     * around its center, so a quarter turn fills the screen instead of spilling out of it.
+     * Any zoom or pan is reset, since the proportions changed underneath it.
      */
     private fun applyVideoScaling() {
         val player = player ?: return
@@ -289,13 +369,10 @@ class VideoPlayerActivity : AppActivity() {
         if (screenWidth == 0 || screenHeight == 0) {
             return
         }
-        val quarterTurns = (videoRotationDegrees / 90f).toInt() % 4
-        val contentWidth = if (quarterTurns % 2 == 1) videoHeight else videoWidth
-        val contentHeight = if (quarterTurns % 2 == 1) videoWidth else videoHeight
         // Contain-fit: either the video matches the screen height at a smaller width, or the
         // screen width at a smaller height.
-        val widthAtScreenHeight = contentWidth * screenHeight / contentHeight
-        val heightAtScreenWidth = contentHeight * screenWidth / contentWidth
+        val widthAtScreenHeight = videoWidth * screenHeight / videoHeight
+        val heightAtScreenWidth = videoHeight * screenWidth / videoWidth
         val videoViewWidth: Int
         val videoViewHeight: Int
         if (widthAtScreenHeight <= screenWidth) {
@@ -308,7 +385,7 @@ class VideoPlayerActivity : AppActivity() {
         textureView.layoutParams = FrameLayout.LayoutParams(
             videoViewWidth, videoViewHeight, Gravity.CENTER
         )
-        textureView.rotation = videoRotationDegrees
+        resetVideoZoom()
     }
 
     private fun togglePlayPause() {
@@ -369,6 +446,26 @@ class VideoPlayerActivity : AppActivity() {
         if (!seekBar.isPressed) {
             seekBar.progress = position.toInt().coerceAtMost(seekBar.max)
         }
+    }
+
+    /**
+     * Steps the media volume by one and shows the percentage like BiliTerminal's changeVolume(),
+     * because watch systems don't display the volume HUD for these adjustments.
+     */
+    private fun changeVolume(add: Boolean) {
+        var volumeNow = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val volumeMax = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val volumeNew = volumeNow + if (add) 1 else -1
+        if (volumeNew in 0..volumeMax) {
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeNew, 0)
+            volumeNow = volumeNew
+        }
+        volumeLabel.text =
+            getString(R.string.video_player_volume_format, volumeNow * 100 / volumeMax)
+        volumeLabel.visibility = View.VISIBLE
+        handler.removeCallbacks(hideVolumeRunnable)
+        handler.postDelayed(hideVolumeRunnable, VOLUME_HIDE_DELAY_MS)
+        scheduleControlsHide()
     }
 
     private fun toggleControls() {
@@ -462,7 +559,9 @@ class VideoPlayerActivity : AppActivity() {
 
         private const val PROGRESS_INTERVAL_MS = 500L
         private const val CONTROLS_HIDE_DELAY_MS = 3000L
+        private const val VOLUME_HIDE_DELAY_MS = 3000L
         private const val SEEK_STEP_MS = 10000L
+        private const val MAX_SCALE = 5f
 
         fun createIntent(context: Context, path: Path, mimeType: MimeType): Intent =
             path.fileProviderUri.createViewIntent(mimeType)

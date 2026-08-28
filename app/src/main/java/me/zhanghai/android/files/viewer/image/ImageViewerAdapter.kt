@@ -89,137 +89,51 @@ class ImageViewerAdapter(
     }
 
     /**
-     * Handles all gestures of a PhotoView image:
-     * * Single taps anywhere toggle the system UI through [onTitleTap]. Taps are tracked ourselves
-     *   with a slightly wider window than GestureDetector's built-in double tap timeout, because
-     *   the system window is so strict that a slightly slow double tap falls apart into two
-     *   single taps, hiding and instantly showing the title again.
-     * * Double tapping and dragging up/down quickly scales the image like SubsamplingScaleImageView
-     *   does. A double tap without dragging toggles between the fitted and the medium scale.
-     * * While the image can still pan itself horizontally, the pager is asked not to intercept so
-     *   that pages are only switched at its edges.
+     * Handles all gestures of a PhotoView image with the attacher's own, standard gestures, the
+     * same way the SubsamplingScaleImageView handles large images: pinch zooming, double tap
+     * zooming and flinging. Single taps toggle the system UI through [onTitleTap], and while the
+     * image can still pan itself horizontally, the pager is asked not to intercept so that pages
+     * are only switched at its edges.
      */
     private fun PhotoView.installImageGestures(
         onTitleTap: () -> Unit,
         canPan: (direction: Int) -> Boolean
     ) {
-        val viewConfiguration = ViewConfiguration.get(context)
-        val touchSlop = viewConfiguration.scaledTouchSlop
-        val doubleTapSlop = viewConfiguration.scaledDoubleTapSlop
-        val doubleTapWindow = ViewConfiguration.getDoubleTapTimeout() + 100L
+        val gestureDetector = GestureDetector(
+            context,
+            object : GestureDetector.SimpleOnGestureListener() {
+                override fun onSingleTapConfirmed(motionEvent: MotionEvent): Boolean {
+                    onTitleTap()
+                    return true
+                }
+            }
+        )
 
-        var lastTapUpAt = 0L
-        var lastTapX = 0f
-        var lastTapY = 0f
-        var downX = 0f
-        var downY = 0f
         var lastX = 0f
-        var moved = false
         var disallowed = false
-        var quickScaling = false
-        var quickScaleMoved = false
-        var baseScale = 1f
-        var anchorX = 0f
-        var anchorY = 0f
-
-        val toggleTitle = Runnable { onTitleTap() }
-        // A recycled or rebound view may still carry a pending title toggle.
-        removeCallbacks(toggleTitle)
-
-        // Suppress the attacher's own fixed-zoom double tap so it cannot fight our quick scaling.
-        attacher.setOnDoubleTapListener(object : GestureDetector.OnDoubleTapListener {
-            override fun onSingleTapConfirmed(motionEvent: MotionEvent): Boolean = true
-            override fun onDoubleTap(motionEvent: MotionEvent): Boolean = true
-            override fun onDoubleTapEvent(motionEvent: MotionEvent): Boolean = true
-        })
 
         setOnTouchListener { view, motionEvent ->
             // Installing this listener replaced the attacher's own one, so its events have to be
-            // forwarded explicitly; otherwise pinch zooming, panning and flinging would all be
-            // dead and only the custom quick scaling below would remain.
+            // forwarded explicitly; otherwise pinch zooming, double tap zooming, panning and
+            // flinging would all be dead.
+            gestureDetector.onTouchEvent(motionEvent)
             attacher.onTouch(view, motionEvent)
             when (motionEvent.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    downX = motionEvent.x
-                    downY = motionEvent.y
                     lastX = motionEvent.x
-                    moved = false
                     disallowed = false
-                    val isDoubleTap = lastTapUpAt != 0L &&
-                            SystemClock.uptimeMillis() - lastTapUpAt <= doubleTapWindow &&
-                            abs(motionEvent.x - lastTapX) < doubleTapSlop &&
-                            abs(motionEvent.y - lastTapY) < doubleTapSlop
-                    if (isDoubleTap) {
-                        // Cancel the pending title toggle of the first tap of this double tap.
-                        view.removeCallbacks(toggleTitle)
-                        quickScaling = true
-                        quickScaleMoved = false
-                        baseScale = scale
-                        anchorX = motionEvent.x
-                        anchorY = motionEvent.y
-                        // The pager must not steal the vertical drag of a quick scale.
-                        view.parent?.requestDisallowInterceptTouchEvent(true)
-                        disallowed = true
-                    }
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    if (quickScaling) {
-                        // Dragging up zooms in and dragging down zooms out; dragging by half the
-                        // view height doubles the zoom.
-                        if (!quickScaleMoved && abs(motionEvent.y - downY) > touchSlop) {
-                            quickScaleMoved = true
-                        }
-                        if (quickScaleMoved) {
-                            val progress = (downY - motionEvent.y) / (height * 0.5f)
-                            val targetScale =
-                                baseScale * (1f + progress).coerceIn(minimumScale, maximumScale)
-                            attacher.setScale(targetScale, anchorX, anchorY, false)
-                        }
-                    } else {
-                        if (!moved && (abs(motionEvent.x - downX) > touchSlop ||
-                                        abs(motionEvent.y - downY) > touchSlop)) {
-                            moved = true
-                        }
-                        // Finger moved right means the image should pan right, revealing its
-                        // left side.
-                        val direction = if (motionEvent.x > lastX) -1 else 1
-                        lastX = motionEvent.x
-                        if (!disallowed && canPan(direction)) {
-                            disallowed = true
-                            view.parent?.requestDisallowInterceptTouchEvent(true)
-                        }
+                    // Finger moved right means the image should pan right, revealing its
+                    // left side.
+                    val direction = if (motionEvent.x > lastX) -1 else 1
+                    lastX = motionEvent.x
+                    if (!disallowed && canPan(direction)) {
+                        disallowed = true
+                        view.parent?.requestDisallowInterceptTouchEvent(true)
                     }
                 }
-                MotionEvent.ACTION_UP -> {
-                    if (quickScaling) {
-                        // A double tap without dragging simply toggles the zoom.
-                        if (!quickScaleMoved) {
-                            val targetScale = if (scale > minimumScale * ZOOM_IN_FACTOR / 2) {
-                                minimumScale
-                            } else {
-                                (minimumScale * ZOOM_IN_FACTOR).coerceAtMost(maximumScale)
-                            }
-                            attacher.setScale(targetScale, anchorX, anchorY, true)
-                        }
-                        quickScaling = false
-                    } else if (!moved) {
-                        // Wait out the double tap window before toggling the title; a second tap
-                        // arriving in time cancels this and becomes a quick scale instead.
-                        view.postDelayed(toggleTitle, doubleTapWindow)
-                    }
-                    // Record the tap so that the next down can detect a double tap; this also
-                    // supports repeated double taps zooming in and out in turns.
-                    lastTapUpAt = SystemClock.uptimeMillis()
-                    lastTapX = motionEvent.x
-                    lastTapY = motionEvent.y
-                    if (disallowed) {
-                        view.parent?.requestDisallowInterceptTouchEvent(false)
-                        disallowed = false
-                    }
-                }
-                MotionEvent.ACTION_CANCEL -> {
-                    quickScaling = false
-                    lastTapUpAt = 0L
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     if (disallowed) {
                         view.parent?.requestDisallowInterceptTouchEvent(false)
                         disallowed = false
@@ -422,9 +336,6 @@ class ImageViewerAdapter(
     companion object {
         // @see android.graphics.RecordingCanvas#MAX_BITMAP_SIZE
         private const val MAX_BITMAP_SIZE = 100 * 1024 * 1024
-
-        // Scale that a plain double tap zooms in to.
-        private const val ZOOM_IN_FACTOR = 2.5f
     }
 
     class ViewHolder(val binding: ImageViewerItemBinding) : RecyclerView.ViewHolder(binding.root)
