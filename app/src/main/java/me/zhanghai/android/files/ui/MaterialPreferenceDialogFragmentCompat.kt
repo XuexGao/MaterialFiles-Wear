@@ -89,7 +89,7 @@ abstract class MaterialPreferenceDialogFragmentCompat : AppCompatDialogFragment(
         whichButtonClicked = DialogInterface.BUTTON_NEGATIVE
         // The dialog context is additionally scaled by the dialog scale setting, so that dialogs
         // can be shrunk further than the activity UI scale on small watch screens.
-        val dialogContext = DialogScaleHelper.wrapDialogContext(requireContext())
+        val dialogContext = DialogScaleHelper.wrapContext(requireContext())
         val dialog = MaterialAlertDialogBuilder(dialogContext, theme)
             .setTitle(dialogTitle)
             .setIcon(dialogIcon)
