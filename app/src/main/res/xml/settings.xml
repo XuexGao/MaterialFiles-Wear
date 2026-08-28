@@ -63,6 +63,15 @@
             android:positiveButtonText="@string/save"
             android:negativeButtonText="@android:string/cancel" />
 
+        <me.zhanghai.android.files.settings.DialogScalePreference
+            android:key="@string/pref_key_dialog_scale"
+            android:title="@string/settings_dialog_scale_title"
+            android:summary="@string/settings_dialog_scale_summary"
+            android:defaultValue="@integer/pref_default_value_dialog_scale"
+            app:dialogLayout="@layout/settings_dialog_scale_dialog"
+            android:positiveButtonText="@string/save"
+            android:negativeButtonText="@android:string/cancel" />
+
         <rikka.preference.SimpleMenuPreference
             android:key="@string/pref_key_font_scale"
             android:title="@string/settings_font_scale_title"

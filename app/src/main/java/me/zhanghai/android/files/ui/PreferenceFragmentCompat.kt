@@ -10,6 +10,8 @@ import android.view.View
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import com.takisoft.preferencex.PreferenceFragmentCompat as TakisoftPreferenceFragmentCompat
+import me.zhanghai.android.files.settings.DialogScalePreference
+import me.zhanghai.android.files.settings.DialogScalePreferenceDialogFragment
 import me.zhanghai.android.files.settings.UiScalePreference
 import me.zhanghai.android.files.settings.UiScalePreferenceDialogFragment
 
@@ -35,6 +37,10 @@ abstract class PreferenceFragmentCompat : TakisoftPreferenceFragmentCompat() {
                 }
                 is UiScalePreference -> {
                     displayPreferenceDialog(UiScalePreferenceDialogFragment(), preference.key)
+                    return
+                }
+                is DialogScalePreference -> {
+                    displayPreferenceDialog(DialogScalePreferenceDialogFragment(), preference.key)
                     return
                 }
             }

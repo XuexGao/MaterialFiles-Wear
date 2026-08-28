@@ -101,19 +101,14 @@
             android:gravity="center"
             android:orientation="horizontal">
 
-            <TextView
+            <ImageButton
                 android:id="@+id/rewind"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:minWidth="40dp"
-                android:padding="8dp"
-                android:text="@string/video_player_rewind"
-                android:textColor="?android:textColorPrimary"
-                android:textSize="14sp" />
+                android:contentDescription="@string/video_player_rewind"
+                android:scaleType="fitCenter"
+                android:src="@drawable/video_player_fast_rewind" />
 
             <ImageButton
                 android:id="@+id/play_pause"
@@ -126,19 +121,14 @@
                 android:scaleType="fitCenter"
                 android:src="@drawable/video_player_play" />
 
-            <TextView
+            <ImageButton
                 android:id="@+id/forward"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:minWidth="40dp"
-                android:padding="8dp"
-                android:text="@string/video_player_forward"
-                android:textColor="?android:textColorPrimary"
-                android:textSize="14sp" />
+                android:contentDescription="@string/video_player_forward"
+                android:scaleType="fitCenter"
+                android:src="@drawable/video_player_fast_forward" />
 
             <ImageButton
                 android:id="@+id/volume_down"

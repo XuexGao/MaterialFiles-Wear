@@ -37,7 +37,8 @@
         <item name="tabStyle">@style/Widget.MaterialFiles.Material3.TabLayout</item>
         <item name="textInputStyle">?textInputOutlinedStyle</item>
         <item name="toolbarStyle">@style/Widget.MaterialFiles.Material3.Toolbar</item>
-        <item name="buttonBarButtonStyle">@style/Widget.MaterialFiles.Button.DialogButton</item>
+        <item name="buttonBarButtonStyle">@style/Widget.MaterialFiles.Button.DialogButton.M3</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.MaterialFiles.Material3.MaterialAlertDialog</item>
         <item name="minTouchTargetSize">0dp</item>
 
         <item name="colorAppBarSurface">?colorSurface</item>
@@ -93,7 +94,8 @@
         <item name="tabStyle">@style/Widget.MaterialFiles.Material3.TabLayout</item>
         <item name="textInputStyle">?textInputOutlinedStyle</item>
         <item name="toolbarStyle">@style/Widget.MaterialFiles.Material3.Toolbar</item>
-        <item name="buttonBarButtonStyle">@style/Widget.MaterialFiles.Button.DialogButton</item>
+        <item name="buttonBarButtonStyle">@style/Widget.MaterialFiles.Button.DialogButton.M3</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.MaterialFiles.Material3.MaterialAlertDialog</item>
         <item name="minTouchTargetSize">0dp</item>
 
         <item name="colorAppBarSurface">@color/dark_50_percent</item>

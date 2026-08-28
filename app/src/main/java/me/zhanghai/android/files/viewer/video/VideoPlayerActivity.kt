@@ -134,8 +134,8 @@ class VideoPlayerActivity : AppActivity() {
         }
 
         playPauseButton.setOnClickListener { togglePlayPause() }
-        findViewById<TextView>(R.id.rewind).setOnClickListener { seekBy(-SEEK_STEP_MS) }
-        findViewById<TextView>(R.id.forward).setOnClickListener { seekBy(SEEK_STEP_MS) }
+        findViewById<ImageButton>(R.id.rewind).setOnClickListener { seekBy(-SEEK_STEP_MS) }
+        findViewById<ImageButton>(R.id.forward).setOnClickListener { seekBy(SEEK_STEP_MS) }
         findViewById<ImageButton>(R.id.volume_down).setOnClickListener { changeVolume(false) }
         findViewById<ImageButton>(R.id.volume_up).setOnClickListener { changeVolume(true) }
         findViewById<ImageButton>(R.id.rotate).setOnClickListener {

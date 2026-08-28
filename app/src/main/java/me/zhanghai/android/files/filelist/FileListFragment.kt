@@ -244,6 +244,15 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             )
         }
         binding.swipeRefreshLayout.setOnRefreshListener { this.refresh() }
+        // The refresh spinner keeps its own colors; tint it with the themed primary so that it
+        // matches Material 3 Expressive palettes too.
+        run {
+            val typedArray = requireContext().obtainStyledAttributes(
+                intArrayOf(com.google.android.material.R.attr.colorPrimary)
+            )
+            binding.swipeRefreshLayout.setColorSchemeColors(typedArray.getColor(0, 0))
+            typedArray.recycle()
+        }
         layoutManager = GridLayoutManager(activity, 1)
         binding.recyclerView.layoutManager = layoutManager
         adapter = FileListAdapter(this)

@@ -38,6 +38,8 @@
     <string name="pref_default_value_theme_color">0</string>
     <string name="pref_key_material_design_3">key_material_design_3</string>
     <bool name="pref_default_value_material_design_3">true</bool>
+    <string name="pref_key_dialog_scale">key_dialog_scale</string>
+    <integer name="pref_default_value_dialog_scale">100</integer>
     <string name="pref_key_night_mode">key_night_mode</string>
     <string name="pref_default_value_night_mode">0</string>
     <string-array name="pref_entry_values_night_mode">

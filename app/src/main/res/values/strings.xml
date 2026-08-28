@@ -750,6 +750,10 @@
     <string name="settings_ui_scale_title">UI scale</string>
     <string name="settings_ui_scale_summary">Shrink or enlarge the entire interface as a percentage, for small watch screens</string>
     <string name="settings_ui_scale_value_format">Current scale: %d%%</string>
+
+    <string name="settings_dialog_scale_title">Dialog scale</string>
+    <string name="settings_dialog_scale_summary">Further scale dialogs on top of the UI scale</string>
+    <string name="settings_dialog_scale_value_format">Current scale: %d%%</string>
     <string name="settings_font_scale_title">Font scale</string>
     <string name="settings_font_scale_summary">Scale text on top of the system font size</string>
     <string-array name="settings_font_scale_entries">
@@ -851,8 +855,8 @@
 
     <string name="video_player_title">Video player</string>
     <string name="video_player_error">Playback failed</string>
-    <string name="video_player_rewind">-10s</string>
-    <string name="video_player_forward">+10s</string>
+    <string name="video_player_rewind">Rewind 10 seconds</string>
+    <string name="video_player_forward">Forward 10 seconds</string>
     <string name="video_player_play_pause">Play or pause</string>
     <string name="video_player_volume_down">Volume down</string>
     <string name="video_player_volume_up">Volume up</string>

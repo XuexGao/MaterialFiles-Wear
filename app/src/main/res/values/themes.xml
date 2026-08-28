@@ -29,6 +29,7 @@
         <item name="colorSurface">@color/color_surface</item>
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.MaterialFiles.MediumComponent</item>
         <item name="buttonBarButtonStyle">@style/Widget.MaterialFiles.Button.DialogButton</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.MaterialFiles.MaterialAlertDialog</item>
         <item name="materialCardViewStyle">@style/Widget.MaterialFiles.CardView</item>
         <item name="navigationViewStyle">@style/Widget.MaterialFiles.NavigationView</item>
         <item name="switchPreferenceCompatStyle">@style/Preference.MaterialFiles.SwitchPreferenceCompat</item>
@@ -93,6 +94,7 @@
         <item name="colorSurface">@color/color_surface_dark</item>
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.MaterialFiles.MediumComponent</item>
         <item name="buttonBarButtonStyle">@style/Widget.MaterialFiles.Button.DialogButton</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.MaterialFiles.MaterialAlertDialog</item>
         <item name="materialCardViewStyle">@style/Widget.MaterialFiles.CardView</item>
         <item name="navigationViewStyle">@style/Widget.MaterialFiles.NavigationView</item>
         <item name="switchPreferenceCompatStyle">@style/Preference.MaterialFiles.SwitchPreferenceCompat</item>

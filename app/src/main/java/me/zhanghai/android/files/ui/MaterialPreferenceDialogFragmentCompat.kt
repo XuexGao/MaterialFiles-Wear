@@ -87,7 +87,10 @@ abstract class MaterialPreferenceDialogFragmentCompat : AppCompatDialogFragment(
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         whichButtonClicked = DialogInterface.BUTTON_NEGATIVE
-        val dialog = MaterialAlertDialogBuilder(requireContext(), theme)
+        // The dialog context is additionally scaled by the dialog scale setting, so that dialogs
+        // can be shrunk further than the activity UI scale on small watch screens.
+        val dialogContext = DialogScaleHelper.wrapDialogContext(requireContext())
+        val dialog = MaterialAlertDialogBuilder(dialogContext, theme)
             .setTitle(dialogTitle)
             .setIcon(dialogIcon)
             .setPositiveButton(positiveButtonText, this)

@@ -70,6 +70,25 @@
         <item name="android:paddingRight">8dp</item>
     </style>
 
+    <style name="Widget.MaterialFiles.Button.DialogButton.M3" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:minWidth">0dp</item>
+        <item name="android:insetLeft">4dp</item>
+        <item name="android:insetRight">4dp</item>
+        <item name="android:paddingLeft">8dp</item>
+        <item name="android:paddingRight">8dp</item>
+    </style>
+
+    <!-- The alert dialog reads its button style from these theme overlays rather than from the
+         activity theme, so the compact dialog button style has to be carried into both of them
+         for the watch dialog fixes to apply. -->
+    <style name="ThemeOverlay.MaterialFiles.MaterialAlertDialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="buttonBarButtonStyle">@style/Widget.MaterialFiles.Button.DialogButton</item>
+    </style>
+
+    <style name="ThemeOverlay.MaterialFiles.Material3.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="buttonBarButtonStyle">@style/Widget.MaterialFiles.Button.DialogButton.M3</item>
+    </style>
+
     <!-- See also ThemeOverlay.AppCompat.ActionBar . -->
     <style name="ThemeOverlay.MaterialFiles.ActionBar" parent="">
         <item name="colorControlNormal">?android:textColorPrimary</item>

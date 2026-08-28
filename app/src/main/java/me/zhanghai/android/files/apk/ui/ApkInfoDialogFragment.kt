@@ -30,6 +30,7 @@ import me.zhanghai.android.files.compat.getDrawableCompat
 import me.zhanghai.android.files.compat.longVersionCodeCompat
 import me.zhanghai.android.files.databinding.DialogApkInfoBinding
 import me.zhanghai.android.files.file.asFileSize
+import me.zhanghai.android.files.ui.DialogScaleHelper
 import me.zhanghai.android.files.util.layoutInflater
 import me.zhanghai.android.files.util.showToast
 import me.zhanghai.android.files.util.startActivitySafe
@@ -54,7 +55,9 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         binding = DialogApkInfoBinding.inflate(layoutInflater)
         populateViews()
-        return MaterialAlertDialogBuilder(requireContext(), theme)
+        return MaterialAlertDialogBuilder(
+            DialogScaleHelper.wrapDialogContext(requireContext()), theme
+        )
             .setView(binding.root)
             // The neutral button lands on the left of the dialog's button bar, like the overflow
             // menu in the main screen, and shares the exact style of the extract button.
