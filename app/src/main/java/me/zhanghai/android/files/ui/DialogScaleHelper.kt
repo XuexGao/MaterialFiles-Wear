@@ -24,7 +24,13 @@ import me.zhanghai.android.files.compat.themeResIdCompat
 object DialogScaleHelper {
     private const val TAG = "DialogScaleHelper"
 
-    fun wrapContext(context: Context): Context {
+    /**
+     * Returns a context for INFLATING dialog content views at the dialog-scaled density. It must
+     * not be used for the dialog itself: a configuration context has no window token, and
+     * Dialog.show() on it crashes with BadTokenException, so dialogs are always built on the
+     * activity context and only their content views are inflated with this.
+     */
+    fun wrapInflaterContext(context: Context): Context {
         val scale = currentScale
         if (scale == 1f) {
             return context
@@ -34,9 +40,8 @@ object DialogScaleHelper {
             val densityDpi = context.resources.displayMetrics.densityDpi
             configuration.densityDpi = (densityDpi * scale).toInt().coerceIn(1, densityDpi)
             val configurationContext = context.createConfigurationContext(configuration)
-            // A configuration context does not inherit the activity's theme, and Material
-            // dialogs crash without it ("requires your app theme to be Theme.AppCompat"), so
-            // reapply the theme the activity actually uses.
+            // A configuration context does not inherit the activity's theme, and inflating
+            // layouts with theme attributes crashes without it.
             val themeRes = (context as? Activity)?.themeResIdCompat ?: 0
             if (themeRes != 0) {
                 ContextThemeWrapper(configurationContext, themeRes)

@@ -218,11 +218,11 @@ class VideoPlayerActivity : AppActivity() {
                     if (!prepared) {
                         return false
                     }
-                    when {
-                        motionEvent.x < root.width / 3f -> seekBy(-SEEK_STEP_MS)
-                        motionEvent.x > root.width * 2f / 3f -> seekBy(SEEK_STEP_MS)
-                        textureView.scaleX > 1f -> resetVideoZoom()
-                        else -> togglePlayPause()
+                    // No double tap seeking: it would conflict with the zoom gestures.
+                    if (textureView.scaleX > 1f) {
+                        resetVideoZoom()
+                    } else {
+                        togglePlayPause()
                     }
                     return true
                 }

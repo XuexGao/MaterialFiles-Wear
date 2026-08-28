@@ -88,24 +88,28 @@ abstract class MaterialPreferenceDialogFragmentCompat : AppCompatDialogFragment(
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         whichButtonClicked = DialogInterface.BUTTON_NEGATIVE
+        // The dialog itself must be built on the activity context (a scaled configuration
+        // context has no window token and crashes on show), so only the content view is
+        // inflated at the dialog-scaled density.
         return try {
-            // The dialog context is additionally scaled by the dialog scale setting, so that
-            // dialogs can be shrunk further than the activity UI scale on small watch screens.
-            createDialog(DialogScaleHelper.wrapContext(requireContext()))
+            createDialog(requireContext()) { DialogScaleHelper.wrapInflaterContext(it) }
         } catch (e: Exception) {
             Log.e("MaterialPreferenceDialog", "Failed to build the scaled dialog", e)
-            createDialog(requireContext())
+            createDialog(requireContext()) { it }
         }
     }
 
-    private fun createDialog(context: Context): Dialog {
+    private fun createDialog(
+        context: Context,
+        wrapContentViewContext: (Context) -> Context
+    ): Dialog {
         val dialog = MaterialAlertDialogBuilder(context, theme)
             .setTitle(dialogTitle)
             .setIcon(dialogIcon)
             .setPositiveButton(positiveButtonText, this)
             .setNegativeButton(negativeButtonText, this)
             .apply {
-                val contentView = onCreateDialogView(context)
+                val contentView = onCreateDialogView(wrapContentViewContext(context))
                 if (contentView != null) {
                     onBindDialogView(contentView)
                     setView(contentView)

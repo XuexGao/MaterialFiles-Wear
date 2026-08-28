@@ -55,16 +55,22 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        // The dialog itself must be built on the activity context (a scaled configuration
+        // context has no window token and crashes on show), so only the content view is
+        // inflated at the dialog-scaled density.
         return try {
-            createDialog(DialogScaleHelper.wrapContext(requireContext()))
+            createDialog(requireContext()) { DialogScaleHelper.wrapInflaterContext(it) }
         } catch (e: Exception) {
             Log.e("ApkInfoDialog", "Failed to build the scaled dialog", e)
-            createDialog(requireContext())
+            createDialog(requireContext()) { it }
         }
     }
 
-    private fun createDialog(context: Context): Dialog {
-        binding = DialogApkInfoBinding.inflate(context.layoutInflater)
+    private fun createDialog(
+        context: Context,
+        wrapContentViewContext: (Context) -> Context
+    ): Dialog {
+        binding = DialogApkInfoBinding.inflate(wrapContentViewContext(context).layoutInflater)
         populateViews()
         return MaterialAlertDialogBuilder(context, theme)
             .setView(binding.root)
