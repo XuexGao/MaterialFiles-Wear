@@ -119,10 +119,12 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
                 val packageName = appInfo.packageName
                 var versionName = ""
                 var apkSize = 0L
+                var installTime = 0L
                 try {
                     val pkgInfo = pm.getPackageInfo(packageName, 0)
                     versionName = pkgInfo.versionName ?: ""
                     apkSize = File(appInfo.sourceDir).length()
+                    installTime = pkgInfo.firstInstallTime
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -132,12 +134,14 @@ class ApkListFragment : Fragment(R.layout.apk_app_list) {
                         packageName = packageName,
                         versionName = versionName,
                         apkSize = apkSize,
-                        sourceDir = appInfo.sourceDir
+                        sourceDir = appInfo.sourceDir,
+                        installTime = installTime
                     )
                 )
             }
         }
-        result.sortBy { it.label.lowercase() }
+        // Newest installs first.
+        result.sortByDescending { it.installTime }
         return result
     }
 

@@ -2,15 +2,13 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:gravity="center_vertical"
+    android:orientation="vertical"
     android:paddingVertical="8dp">
 
     <TextView
         android:id="@+id/label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:minWidth="96dp"
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:textColor="?android:textColorSecondary"
         android:maxLines="1"
@@ -18,13 +16,10 @@
 
     <TextView
         android:id="@+id/value"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:layout_marginStart="16dp"
+        android:layout_marginTop="2dp"
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:textColor="?android:textColorPrimary"
-        android:gravity="end"
-        android:maxLines="2"
-        android:ellipsize="middle" />
+        android:textIsSelectable="true" />
 </LinearLayout>

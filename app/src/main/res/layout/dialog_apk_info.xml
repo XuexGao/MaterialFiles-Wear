@@ -2,8 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:paddingTop="@dimen/dialog_padding_minus_16dp">
+    android:orientation="vertical">
 
     <!-- Header -->
     <LinearLayout
@@ -11,6 +10,8 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
+        android:paddingTop="16dp"
+        android:paddingBottom="4dp"
         android:paddingStart="?dialogPreferredPadding"
         android:paddingEnd="?dialogPreferredPadding">
 
@@ -18,7 +19,7 @@
             android:id="@+id/icon"
             android:layout_width="@dimen/large_app_icon_size"
             android:layout_height="@dimen/large_app_icon_size"
-            android:layout_marginEnd="16dp"
+            android:layout_marginEnd="12dp"
             android:scaleType="fitCenter"
             android:contentDescription="@null" />
 
@@ -32,7 +33,7 @@
                 android:id="@+id/appName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceTitleLarge"
+                android:textAppearance="?attr/textAppearanceHeadlineSmall"
                 android:textColor="?android:textColorPrimary"
                 android:maxLines="1"
                 android:ellipsize="end" />
@@ -41,7 +42,8 @@
                 android:id="@+id/version"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceBodyLarge"
+                android:layout_marginTop="2dp"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
                 android:textColor="?android:textColorSecondary"
                 android:maxLines="1"
                 android:ellipsize="end" />
@@ -53,8 +55,10 @@
         android:id="@+id/infoList"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
         android:orientation="vertical"
+        android:paddingTop="4dp"
+        android:paddingBottom="8dp"
         android:paddingStart="?dialogPreferredPadding"
         android:paddingEnd="?dialogPreferredPadding" />
 </LinearLayout>

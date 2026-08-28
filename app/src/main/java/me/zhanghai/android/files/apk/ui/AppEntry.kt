@@ -10,5 +10,6 @@ data class AppEntry(
     val packageName: String,
     val versionName: String,
     val apkSize: Long,
-    val sourceDir: String
+    val sourceDir: String,
+    val installTime: Long = 0
 )

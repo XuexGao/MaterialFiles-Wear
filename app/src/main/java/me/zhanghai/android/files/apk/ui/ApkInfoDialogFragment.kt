@@ -20,7 +20,6 @@ import androidx.lifecycle.lifecycleScope
 import coil.load
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.File
-import java8.nio.file.Paths
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -30,14 +29,10 @@ import me.zhanghai.android.files.coil.ignoreError
 import me.zhanghai.android.files.compat.getDrawableCompat
 import me.zhanghai.android.files.compat.longVersionCodeCompat
 import me.zhanghai.android.files.databinding.DialogApkInfoBinding
-import me.zhanghai.android.files.file.MimeType
 import me.zhanghai.android.files.file.asFileSize
-import me.zhanghai.android.files.file.fileProviderUri
-import me.zhanghai.android.files.util.createSendStreamIntent
 import me.zhanghai.android.files.util.layoutInflater
 import me.zhanghai.android.files.util.showToast
 import me.zhanghai.android.files.util.startActivitySafe
-import me.zhanghai.android.files.util.withChooser
 
 class ApkInfoDialogFragment : AppCompatDialogFragment() {
     private lateinit var entry: AppEntry
@@ -227,15 +222,6 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
             }
 
             context.showToast(context.getString(R.string.apk_extract_saved, targetFile.absolutePath))
-            val intent = Paths.get(targetFile.absolutePath).fileProviderUri
-                .createSendStreamIntent(MimeType.APK)
-                .withChooser(context.getString(R.string.apk_extract_share_title))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            try {
-                context.startActivitySafe(intent)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
         }
     }
 
