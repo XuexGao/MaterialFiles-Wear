@@ -202,8 +202,6 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     private lateinit var breadcrumbBackPressCallback: OnBackPressedCallback
 
-    private val pendingContentBindings =
-        ArrayDeque<FileListFragmentContentIncludeBinding>()
 
     private val debouncedSearchRunnable = DebouncedRunnable(Handler(Looper.getMainLooper()), 1000) {
         if (!isResumed || !currentWindow.viewModel.isSearchViewExpanded) {
@@ -525,18 +523,17 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         if (pickOptions != null) {
             windowViewModel.pickOptions = pickOptions
         }
-        val contentBinding = FileListFragmentContentIncludeBinding.inflate(layoutInflater)
-        pendingContentBindings.addLast(contentBinding)
-        val window = Window(nextWindowId++, windowViewModel, contentBinding)
+        val window = Window(nextWindowId++, windowViewModel)
         windows.add(window)
         setupWindowContent(window)
         window.observeLiveData()
         contentPager.adapter!!.notifyItemInserted(windows.size - 1)
         contentPager.offscreenPageLimit = windows.size
+        onCurrentWindowChanged()
     }
 
     private fun setupWindowContent(window: Window) {
-        val contentBinding = window.contentBinding!!
+        val contentBinding = window.contentBinding ?: return
         window.adapter = FileListAdapter(this)
         window.layoutManager = GridLayoutManager(requireActivity(), 1)
         contentBinding.recyclerView.layoutManager = window.layoutManager
@@ -574,24 +571,16 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     private inner class WindowPagerAdapter :
         RecyclerView.Adapter<WindowPagerAdapter.ViewHolder>() {
 
-        inner class ViewHolder(val contentBinding: FileListFragmentContentIncludeBinding) :
-            RecyclerView.ViewHolder(contentBinding.root)
+        inner class ViewHolder(val pageBinding: FileListFragmentWindowPageBinding) :
+            RecyclerView.ViewHolder(pageBinding.root)
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            // addWindow queues one binding per window in creation order, and pages bind in that
-            // order; inflate a fresh one only if the queue is empty for some reason (the window
-            // is then re-set up in onBindViewHolder).
-            val binding = pendingContentBindings.removeFirstOrNull()
-                ?: FileListFragmentContentIncludeBinding.inflate(
-                    layoutInflater, parent, false
-                )
-            return ViewHolder(binding)
-        }
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
+            ViewHolder(FileListFragmentWindowPageBinding.inflate(layoutInflater, parent, false))
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val window = windows[position]
-            if (window.contentBinding !== holder.contentBinding) {
-                window.contentBinding = holder.contentBinding
+            if (window.contentBinding !== holder.pageBinding.contentInclude) {
+                window.contentBinding = holder.pageBinding.contentInclude
                 setupWindowContent(window)
             }
         }
@@ -603,7 +592,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         super.onSaveInstanceState(outState)
 
         outState.putStringArray(
-            STATE_WINDOWS, windows.map { it.currentWindow.viewModel.currentPath.toString() }.toTypedArray()
+            STATE_WINDOWS, windows.map { it.viewModel.currentPath.toString() }.toTypedArray()
         )
         outState.putInt(STATE_CURRENT_WINDOW, currentWindowIndex)
         outState.putLong(STATE_NEXT_WINDOW_ID, nextWindowId)
@@ -778,9 +767,9 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             else -> binding.toolbar.subtitle = getSubtitle(files!!)
         }
         val hasFiles = !files.isNullOrEmpty()
-        currentWindow.contentBinding.swipeRefreshLayout.isRefreshing = stateful is Loading && (hasFiles || isSearching)
-        currentWindow.contentBinding.progress.fadeToVisibilityUnsafe(stateful is Loading && !(hasFiles || isSearching))
-        currentWindow.contentBinding.errorText.fadeToVisibilityUnsafe(stateful is Failure && !hasFiles)
+        currentWindow.contentBinding?.swipeRefreshLayout.isRefreshing = stateful is Loading && (hasFiles || isSearching)
+        currentWindow.contentBinding?.progress.fadeToVisibilityUnsafe(stateful is Loading && !(hasFiles || isSearching))
+        currentWindow.contentBinding?.errorText.fadeToVisibilityUnsafe(stateful is Failure && !hasFiles)
         val throwable = (stateful as? Failure)?.throwable
         if (throwable != null) {
             throwable.printStackTrace()
@@ -788,10 +777,10 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             if (hasFiles) {
                 showToast(error)
             } else {
-                currentWindow.contentBinding.errorText.text = error
+                currentWindow.contentBinding?.errorText.text = error
             }
         }
-        currentWindow.contentBinding.emptyView.fadeToVisibilityUnsafe(stateful is Success && !hasFiles)
+        currentWindow.contentBinding?.emptyView.fadeToVisibilityUnsafe(stateful is Success && !hasFiles)
         if (files != null) {
             updateAdapterFileList()
         } else {
@@ -1081,7 +1070,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         if (!overlayActionMode.isActive) {
             binding.appBarLayout.setExpanded(true)
             binding.appBarLayout.addOnOffsetChangedListener(
-                AppBarLayoutExpandHackListener(currentWindow.contentBinding.recyclerView)
+                AppBarLayoutExpandHackListener(currentWindow.contentBinding?.recyclerView)
             )
             overlayActionMode.start(object : ToolbarActionMode.Callback {
                 override fun onToolbarActionModeMenuItemClicked(
