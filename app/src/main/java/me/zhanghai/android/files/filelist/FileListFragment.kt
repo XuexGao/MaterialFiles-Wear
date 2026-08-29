@@ -48,6 +48,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.viewpager2.widget.ViewPager2
 import com.leinardi.android.speeddial.SpeedDialView
 import java8.nio.file.Path
 import java8.nio.file.Paths
@@ -169,7 +170,23 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     private val args by args<Args>()
     private val argsPath by lazy { args.intent.extraPath }
 
-    private val viewModel by viewModels { { FileListViewModel() } }
+    private class Window(
+        val id: Long,
+        val viewModel: FileListViewModel,
+        var contentBinding: FileListFragmentContentIncludeBinding? = null,
+        var adapter: FileListAdapter? = null,
+        var layoutManager: GridLayoutManager? = null
+    )
+
+    private val windows = mutableListOf<Window>()
+    private var currentWindowIndex = 0
+    private var nextWindowId = 0L
+
+    private val currentWindow: Window
+        get() = windows[currentWindowIndex]
+
+    private val navigationPathObservers =
+        mutableListOf<Pair<LifecycleOwner, (Path) -> Unit>>()
 
     private lateinit var binding: Binding
 
@@ -181,19 +198,22 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     private lateinit var bottomActionMode: ToolbarActionMode
 
-    private lateinit var layoutManager: GridLayoutManager
+    private lateinit var contentPager: ViewPager2
 
-    private lateinit var adapter: FileListAdapter
+    private lateinit var breadcrumbBackPressCallback: OnBackPressedCallback
+
+    private val pendingContentBindings =
+        ArrayDeque<FileListFragmentContentIncludeBinding>()
 
     private val debouncedSearchRunnable = DebouncedRunnable(Handler(Looper.getMainLooper()), 1000) {
-        if (!isResumed || !viewModel.isSearchViewExpanded) {
+        if (!isResumed || !currentWindow.viewModel.isSearchViewExpanded) {
             return@DebouncedRunnable
         }
-        val query = viewModel.searchViewQuery
+        val query = currentWindow.viewModel.searchViewQuery
         if (query.isEmpty()) {
             return@DebouncedRunnable
         }
-        viewModel.search(query)
+        currentWindow.viewModel.search(query)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -229,38 +249,16 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         bottomActionMode = PersistentBarLayoutToolbarActionMode(
             binding.persistentBarLayout, binding.bottomBarLayout, binding.bottomToolbar
         )
-        val contentLayoutInitialPaddingBottom = binding.contentLayout.paddingBottom
-        binding.appBarLayout.addOnOffsetChangedListener { _, verticalOffset ->
-            binding.contentLayout.updatePaddingRelative(
-                bottom = contentLayoutInitialPaddingBottom +
-                    binding.appBarLayout.totalScrollRange + verticalOffset
-            )
-        }
         binding.appBarLayout.syncBackgroundColorTo(binding.overlayToolbar)
         binding.breadcrumbLayout.setListener(this)
-        if (!(activity.hasSw600Dp && activity.isOrientationLandscape)) {
-            binding.swipeRefreshLayout.setProgressViewEndTarget(
-                true, binding.swipeRefreshLayout.progressViewEndOffset
-            )
-        }
-        binding.swipeRefreshLayout.setOnRefreshListener { this.refresh() }
-        // The refresh spinner keeps its own colors; tint it with the themed primary so that it
-        // matches Material 3 Expressive palettes too.
-        run {
-            val typedArray = requireContext().obtainStyledAttributes(
-                intArrayOf(androidx.appcompat.R.attr.colorPrimary)
-            )
-            binding.swipeRefreshLayout.setColorSchemeColors(typedArray.getColor(0, 0))
-            typedArray.recycle()
-        }
-        layoutManager = GridLayoutManager(activity, 1)
-        binding.recyclerView.layoutManager = layoutManager
-        adapter = FileListAdapter(this)
-        binding.recyclerView.adapter = adapter
-        val fastScroller = ThemedFastScroller.create(binding.recyclerView)
-        binding.recyclerView.setOnApplyWindowInsetsListener(
-            ScrollingViewOnApplyWindowInsetsListener(binding.recyclerView, fastScroller)
-        )
+        contentPager = binding.contentPager
+        contentPager.adapter = WindowPagerAdapter()
+        contentPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                currentWindowIndex = position
+                onCurrentWindowChanged()
+            }
+        })
         binding.speedDialView.inflate(R.menu.file_list_speed_dial)
         binding.speedDialView.setOnActionSelectedListener {
             when (it.id) {
@@ -277,14 +275,9 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         addOnBackPressedCallback(
             object : OnBackPressedCallback(false) {
                 override fun handleOnBackPressed() {
-                    viewModel.navigateUp()
+                    currentWindow.viewModel.navigateUp()
                 }
-            }
-                .also { callback ->
-                    viewModel.breadcrumbLiveData.observe(viewLifecycleOwner) {
-                        callback.isEnabled = viewModel.canNavigateUpBreadcrumb
-                    }
-                }
+            }.also { breadcrumbBackPressCallback = it }
         )
         addOnBackPressedCallback(overlayActionMode.onBackPressedCallback)
         addOnBackPressedCallback(SpeedDialViewOnBackPressedCallback(binding.speedDialView))
@@ -298,7 +291,8 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             })
         }
 
-        if (!viewModel.hasTrail) {
+        val savedPaths = savedInstanceState?.getStringArray(STATE_WINDOWS)
+        if (savedPaths == null) {
             var path = argsPath
             val intent = args.intent
             var pickOptions: PickOptions? = null
@@ -354,19 +348,18 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             if (path == null) {
                 path = Settings.FILE_LIST_DEFAULT_DIRECTORY.valueCompat
             }
-            viewModel.resetTo(path)
-            if (pickOptions != null) {
-                viewModel.pickOptions = pickOptions
+            addWindow(path, pickOptions)
+        } else {
+            for (pathString in savedPaths) {
+                addWindow(Paths.get(pathString), null)
             }
+            currentWindowIndex =
+                savedInstanceState.getInt(STATE_CURRENT_WINDOW, 0)
+                    .coerceIn(0, windows.size - 1)
+            nextWindowId = savedInstanceState.getLong(STATE_NEXT_WINDOW_ID, windows.size.toLong())
+            contentPager.offscreenPageLimit = windows.size
         }
-        viewModel.currentPathLiveData.observe(viewLifecycleOwner) { onCurrentPathChanged(it) }
-        viewModel.searchViewExpandedLiveData.observe(viewLifecycleOwner) {
-            onSearchViewExpandedChanged(it)
-        }
-        viewModel.breadcrumbLiveData.observe(viewLifecycleOwner) {
-            binding.breadcrumbLayout.setData(it)
-        }
-        viewModel.viewTypeLiveData.observe(viewLifecycleOwner) { onViewTypeChanged(it) }
+        onCurrentWindowChanged()
         // Live data only calls observeForever() on its sources when it is active, so we have to
         // make view type live data active first (so that it can load its initial value) before we
         // register another observer that needs to get the view type.
@@ -375,15 +368,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 onPersistentDrawerOpenChanged(it)
             }
         }
-        viewModel.sortOptionsLiveData.observe(viewLifecycleOwner) { onSortOptionsChanged(it) }
-        viewModel.viewSortPathSpecificLiveData.observe(viewLifecycleOwner) {
-            onViewSortPathSpecificChanged(it)
-        }
-        viewModel.pickOptionsLiveData.observe(viewLifecycleOwner) { onPickOptionsChanged(it) }
-        viewModel.selectedFilesLiveData.observe(viewLifecycleOwner) { onSelectedFilesChanged(it) }
-        viewModel.pasteStateLiveData.observe(viewLifecycleOwner) { onPasteStateChanged(it) }
         Settings.FILE_NAME_ELLIPSIZE.observe(viewLifecycleOwner) { onFileNameEllipsizeChanged(it) }
-        viewModel.fileListLiveData.observe(viewLifecycleOwner) { onFileListChanged(it) }
         Settings.FILE_LIST_SHOW_HIDDEN_FILES.observe(viewLifecycleOwner) {
             onShowHiddenFilesChanged(it)
         }
@@ -392,10 +377,10 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     override fun onResume() {
         super.onResume()
 
-        if (!viewModel.isNotificationPermissionRequested) {
+        if (!currentWindow.viewModel.isNotificationPermissionRequested) {
             ensureStorageAccess()
         }
-        if (!viewModel.isStorageAccessRequested) {
+        if (!currentWindow.viewModel.isStorageAccessRequested) {
             ensureNotificationPermission()
         }
     }
@@ -413,8 +398,8 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         // MenuItem.OnActionExpandListener.onMenuItemActionExpand() is called before SearchView
         // resets the query.
         searchView.setOnSearchClickListener {
-            viewModel.isSearchViewExpanded = true
-            searchView.setQuery(viewModel.searchViewQuery, false)
+            currentWindow.viewModel.isSearchViewExpanded = true
+            searchView.setQuery(currentWindow.viewModel.searchViewQuery, false)
             debouncedSearchRunnable()
         }
         // SearchView.OnCloseListener.onClose() is not always called.
@@ -422,15 +407,15 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             override fun onMenuItemActionExpand(item: MenuItem): Boolean = true
 
             override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
-                viewModel.isSearchViewExpanded = false
-                viewModel.stopSearching()
+                currentWindow.viewModel.isSearchViewExpanded = false
+                currentWindow.viewModel.stopSearching()
                 return true
             }
         })
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String): Boolean {
                 debouncedSearchRunnable.cancel()
-                viewModel.search(query)
+                currentWindow.viewModel.search(query)
                 return true
             }
 
@@ -438,12 +423,12 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 if (searchView.shouldIgnoreQueryChange) {
                     return false
                 }
-                viewModel.searchViewQuery = query
+                currentWindow.viewModel.searchViewQuery = query
                 debouncedSearchRunnable()
                 return false
             }
         })
-        if (viewModel.isSearchViewExpanded) {
+        if (currentWindow.viewModel.isSearchViewExpanded) {
             menuBinding.searchItem.expandActionView()
         }
     }
@@ -452,6 +437,177 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         if (this::menuBinding.isInitialized && menuBinding.searchItem.isActionViewExpanded) {
             menuBinding.searchItem.collapseActionView()
         }
+    }
+
+    /**
+     * Registers the live data observers of one window. The callbacks are guarded by the window
+     * identity so that background updates of other windows never touch the shared chrome, which
+     * always shows the current window.
+     */
+    private fun Window.observeLiveData() {
+        val window = this
+        window.viewModel.currentPathLiveData.observe(viewLifecycleOwner) {
+            if (window === currentWindow) {
+                onCurrentPathChanged(it)
+            }
+        }
+        window.viewModel.searchViewExpandedLiveData.observe(viewLifecycleOwner) {
+            if (window === currentWindow) {
+                onSearchViewExpandedChanged(it)
+            }
+        }
+        window.viewModel.breadcrumbLiveData.observe(viewLifecycleOwner) {
+            if (window === currentWindow) {
+                binding.breadcrumbLayout.setData(it)
+                breadcrumbBackPressCallback.isEnabled = window.currentWindow.viewModel.canNavigateUpBreadcrumb
+            }
+        }
+        window.viewModel.viewTypeLiveData.observe(viewLifecycleOwner) {
+            if (window === currentWindow) {
+                onViewTypeChanged(it)
+            }
+        }
+        window.viewModel.sortOptionsLiveData.observe(viewLifecycleOwner) {
+            if (window === currentWindow) {
+                onSortOptionsChanged(it)
+            }
+        }
+        window.viewModel.viewSortPathSpecificLiveData.observe(viewLifecycleOwner) {
+            if (window === currentWindow) {
+                onViewSortPathSpecificChanged(it)
+            }
+        }
+        window.viewModel.pickOptionsLiveData.observe(viewLifecycleOwner) {
+            if (window === currentWindow) {
+                onPickOptionsChanged(it)
+            }
+        }
+        window.viewModel.selectedFilesLiveData.observe(viewLifecycleOwner) {
+            if (window === currentWindow) {
+                onSelectedFilesChanged(it)
+            }
+        }
+        window.viewModel.pasteStateLiveData.observe(viewLifecycleOwner) {
+            if (window === currentWindow) {
+                onPasteStateChanged(it)
+            }
+        }
+        window.viewModel.fileListLiveData.observe(viewLifecycleOwner) {
+            if (window === currentWindow) {
+                onFileListChanged(it)
+            }
+        }
+    }
+
+    /** Pushes the current window's state into the shared chrome after a window switch. */
+    private fun onCurrentWindowChanged() {
+        val window = currentWindow
+        onCurrentPathChanged(window.currentWindow.viewModel.currentPath)
+        onSearchViewExpandedChanged(window.currentWindow.viewModel.searchViewExpandedLiveData.valueCompat)
+        window.currentWindow.viewModel.breadcrumbLiveData.value?.let {
+            binding.breadcrumbLayout.setData(it)
+        }
+        breadcrumbBackPressCallback.isEnabled = window.currentWindow.viewModel.canNavigateUpBreadcrumb
+        onViewTypeChanged(window.currentWindow.viewModel.viewTypeLiveData.valueCompat)
+        onSortOptionsChanged(window.currentWindow.viewModel.sortOptionsLiveData.valueCompat)
+        onViewSortPathSpecificChanged(window.currentWindow.viewModel.viewSortPathSpecificLiveData.valueCompat)
+        onPickOptionsChanged(window.currentWindow.viewModel.pickOptionsLiveData.valueCompat)
+        onSelectedFilesChanged(window.currentWindow.viewModel.selectedFilesLiveData.valueCompat)
+        onPasteStateChanged(window.currentWindow.viewModel.pasteStateLiveData.valueCompat)
+        onFileListChanged(window.currentWindow.viewModel.fileListStateful)
+        for ((_, observer) in navigationPathObservers) {
+            observer(window.currentWindow.viewModel.currentPath)
+        }
+    }
+
+    private fun addWindow(path: Path, pickOptions: PickOptions?) {
+        val windowViewModel = FileListViewModel()
+        windowViewModel.resetTo(path)
+        if (pickOptions != null) {
+            windowViewModel.pickOptions = pickOptions
+        }
+        val contentBinding = FileListFragmentContentIncludeBinding.inflate(layoutInflater)
+        pendingContentBindings.addLast(contentBinding)
+        val window = Window(nextWindowId++, windowViewModel, contentBinding)
+        windows.add(window)
+        setupWindowContent(window)
+        window.observeLiveData()
+        contentPager.adapter!!.notifyItemInserted(windows.size - 1)
+        contentPager.offscreenPageLimit = windows.size
+    }
+
+    private fun setupWindowContent(window: Window) {
+        val contentBinding = window.contentBinding!!
+        window.adapter = FileListAdapter(this)
+        window.layoutManager = GridLayoutManager(requireActivity(), 1)
+        contentBinding.recyclerView.layoutManager = window.layoutManager
+        contentBinding.recyclerView.adapter = window.adapter
+        val fastScroller = ThemedFastScroller.create(contentBinding.recyclerView)
+        contentBinding.recyclerView.setOnApplyWindowInsetsListener(
+            ScrollingViewOnApplyWindowInsetsListener(contentBinding.recyclerView, fastScroller)
+        )
+        if (!(requireActivity().hasSw600Dp && requireActivity().isOrientationLandscape)) {
+            contentBinding.swipeRefreshLayout.setProgressViewEndTarget(
+                true, contentBinding.swipeRefreshLayout.progressViewEndOffset
+            )
+        }
+        contentBinding.swipeRefreshLayout.setOnRefreshListener {
+            if (window === currentWindow) {
+                refresh()
+            }
+        }
+        // The refresh spinner keeps its own colors; tint it with the themed primary so that it
+        // matches Material 3 Expressive palettes too.
+        val typedArray = requireContext().obtainStyledAttributes(
+            intArrayOf(androidx.appcompat.R.attr.colorPrimary)
+        )
+        contentBinding.swipeRefreshLayout.setColorSchemeColors(typedArray.getColor(0, 0))
+        typedArray.recycle()
+        val contentLayoutInitialPaddingBottom = contentBinding.contentLayout.paddingBottom
+        binding.appBarLayout.addOnOffsetChangedListener { _, verticalOffset ->
+            contentBinding.contentLayout.updatePaddingRelative(
+                bottom = contentLayoutInitialPaddingBottom +
+                    binding.appBarLayout.totalScrollRange + verticalOffset
+            )
+        }
+    }
+
+    private inner class WindowPagerAdapter :
+        RecyclerView.Adapter<WindowPagerAdapter.ViewHolder>() {
+
+        inner class ViewHolder(val contentBinding: FileListFragmentContentIncludeBinding) :
+            RecyclerView.ViewHolder(contentBinding.root)
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            // addWindow queues one binding per window in creation order, and pages bind in that
+            // order; inflate a fresh one only if the queue is empty for some reason (the window
+            // is then re-set up in onBindViewHolder).
+            val binding = pendingContentBindings.removeFirstOrNull()
+                ?: FileListFragmentContentIncludeBinding.inflate(
+                    layoutInflater, parent, false
+                )
+            return ViewHolder(binding)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val window = windows[position]
+            if (window.contentBinding !== holder.contentBinding) {
+                window.contentBinding = holder.contentBinding
+                setupWindowContent(window)
+            }
+        }
+
+        override fun getItemCount(): Int = windows.size
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+
+        outState.putStringArray(
+            STATE_WINDOWS, windows.map { it.currentWindow.viewModel.currentPath.toString() }.toTypedArray()
+        )
+        outState.putInt(STATE_CURRENT_WINDOW, currentWindowIndex)
+        outState.putLong(STATE_NEXT_WINDOW_ID, nextWindowId)
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
@@ -477,31 +633,31 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 true
             }
             R.id.action_view_list -> {
-                viewModel.viewType = FileViewType.LIST
+                currentWindow.viewModel.viewType = FileViewType.LIST
                 true
             }
             R.id.action_view_grid -> {
-                viewModel.viewType = FileViewType.GRID
+                currentWindow.viewModel.viewType = FileViewType.GRID
                 true
             }
             R.id.action_sort_by_name -> {
-                viewModel.setSortBy(By.NAME)
+                currentWindow.viewModel.setSortBy(By.NAME)
                 true
             }
             R.id.action_sort_by_type -> {
-                viewModel.setSortBy(By.TYPE)
+                currentWindow.viewModel.setSortBy(By.TYPE)
                 true
             }
             R.id.action_sort_by_size -> {
-                viewModel.setSortBy(By.SIZE)
+                currentWindow.viewModel.setSortBy(By.SIZE)
                 true
             }
             R.id.action_sort_by_last_modified -> {
-                viewModel.setSortBy(By.LAST_MODIFIED)
+                currentWindow.viewModel.setSortBy(By.LAST_MODIFIED)
                 true
             }
             R.id.action_sort_order_ascending -> {
-                viewModel.setSortOrder(
+                currentWindow.viewModel.setSortOrder(
                     if (!menuBinding.sortOrderAscendingItem.isChecked) {
                         Order.ASCENDING
                     } else {
@@ -511,11 +667,11 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 true
             }
             R.id.action_sort_directories_first -> {
-                viewModel.setSortDirectoriesFirst(!menuBinding.sortDirectoriesFirstItem.isChecked)
+                currentWindow.viewModel.setSortDirectoriesFirst(!menuBinding.sortDirectoriesFirstItem.isChecked)
                 true
             }
             R.id.action_view_sort_path_specific -> {
-                viewModel.isViewSortPathSpecific = !menuBinding.viewSortPathSpecificItem.isChecked
+                currentWindow.viewModel.isViewSortPathSpecific = !menuBinding.viewSortPathSpecificItem.isChecked
                 true
             }
             R.id.action_new_task -> {
@@ -616,16 +772,16 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     private fun onFileListChanged(stateful: Stateful<List<FileItem>>) {
         val files = stateful.value
-        val isSearching = viewModel.searchState.isSearching
+        val isSearching = currentWindow.viewModel.searchState.isSearching
         when {
             stateful is Failure -> binding.toolbar.setSubtitle(R.string.error)
             stateful is Loading && !isSearching -> binding.toolbar.setSubtitle(R.string.loading)
             else -> binding.toolbar.subtitle = getSubtitle(files!!)
         }
         val hasFiles = !files.isNullOrEmpty()
-        binding.swipeRefreshLayout.isRefreshing = stateful is Loading && (hasFiles || isSearching)
-        binding.progress.fadeToVisibilityUnsafe(stateful is Loading && !(hasFiles || isSearching))
-        binding.errorText.fadeToVisibilityUnsafe(stateful is Failure && !hasFiles)
+        currentWindow.contentBinding.swipeRefreshLayout.isRefreshing = stateful is Loading && (hasFiles || isSearching)
+        currentWindow.contentBinding.progress.fadeToVisibilityUnsafe(stateful is Loading && !(hasFiles || isSearching))
+        currentWindow.contentBinding.errorText.fadeToVisibilityUnsafe(stateful is Failure && !hasFiles)
         val throwable = (stateful as? Failure)?.throwable
         if (throwable != null) {
             throwable.printStackTrace()
@@ -633,18 +789,18 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             if (hasFiles) {
                 showToast(error)
             } else {
-                binding.errorText.text = error
+                currentWindow.contentBinding.errorText.text = error
             }
         }
-        binding.emptyView.fadeToVisibilityUnsafe(stateful is Success && !hasFiles)
+        currentWindow.contentBinding.emptyView.fadeToVisibilityUnsafe(stateful is Success && !hasFiles)
         if (files != null) {
             updateAdapterFileList()
         } else {
             // This resets animation as well.
-            adapter.clear()
+            currentWindow.adapter!!.clear()
         }
         if (stateful is Success) {
-            viewModel.pendingState?.let { layoutManager.onRestoreInstanceState(it) }
+            currentWindow.viewModel.pendingState?.let { currentWindow.layoutManager!!.onRestoreInstanceState(it) }
         }
     }
 
@@ -677,12 +833,12 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     private fun onViewTypeChanged(viewType: FileViewType) {
         updateSpanCount()
-        adapter.viewType = viewType
+        currentWindow.adapter!!.viewType = viewType
         updateViewSortMenuItems()
     }
 
     private fun updateSpanCount() {
-        layoutManager.spanCount = when (viewModel.viewType) {
+        currentWindow.layoutManager!!.spanCount = when (currentWindow.viewModel.viewType) {
             FileViewType.LIST -> 1
             FileViewType.GRID -> {
                 var widthDp = resources.configuration.screenWidthDp
@@ -697,7 +853,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun onSortOptionsChanged(sortOptions: FileSortOptions) {
-        adapter.sortOptions = sortOptions
+        currentWindow.adapter!!.sortOptions = sortOptions
         updateViewSortMenuItems()
     }
 
@@ -709,18 +865,18 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         if (!this::menuBinding.isInitialized) {
             return
         }
-        val searchViewExpanded = viewModel.isSearchViewExpanded
+        val searchViewExpanded = currentWindow.viewModel.isSearchViewExpanded
         menuBinding.viewSortItem.isVisible = !searchViewExpanded
         if (searchViewExpanded) {
             return
         }
-        val viewType = viewModel.viewType
+        val viewType = currentWindow.viewModel.viewType
         val checkedViewTypeItem = when (viewType) {
             FileViewType.LIST -> menuBinding.viewListItem
             FileViewType.GRID -> menuBinding.viewGridItem
         }
         checkedViewTypeItem.isChecked = true
-        val sortOptions = viewModel.sortOptions
+        val sortOptions = currentWindow.viewModel.sortOptions
         val checkedSortByItem = when (sortOptions.by) {
             By.NAME -> menuBinding.sortByNameItem
             By.TYPE -> menuBinding.sortByTypeItem
@@ -730,12 +886,12 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         checkedSortByItem.isChecked = true
         menuBinding.sortOrderAscendingItem.isChecked = sortOptions.order == Order.ASCENDING
         menuBinding.sortDirectoriesFirstItem.isChecked = sortOptions.isDirectoriesFirst
-        menuBinding.viewSortPathSpecificItem.isChecked = viewModel.isViewSortPathSpecific
+        menuBinding.viewSortPathSpecificItem.isChecked = currentWindow.viewModel.isViewSortPathSpecific
     }
 
     private fun navigateUp() {
         collapseSearchView()
-        viewModel.navigateUp()
+        currentWindow.viewModel.navigateUp()
     }
 
     private fun showNavigateToPathDialog() {
@@ -747,7 +903,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun refresh() {
-        viewModel.reload()
+        currentWindow.viewModel.reload()
     }
 
     private fun setShowHiddenFiles(showHiddenFiles: Boolean) {
@@ -760,11 +916,11 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun updateAdapterFileList() {
-        var files = viewModel.fileListStateful.value ?: return
+        var files = currentWindow.viewModel.fileListStateful.value ?: return
         if (!Settings.FILE_LIST_SHOW_HIDDEN_FILES.valueCompat) {
             files = files.filterNot { it.isHidden }
         }
-        adapter.replaceListAndIsSearching(files, viewModel.searchState.isSearching)
+        currentWindow.adapter!!.replaceListAndIsSearching(files, currentWindow.viewModel.searchState.isSearching)
     }
 
     private fun updateShowHiddenFilesMenuItem() {
@@ -794,8 +950,8 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     override fun navigateTo(path: Path) {
         collapseSearchView()
-        val state = layoutManager.onSaveInstanceState()
-        viewModel.navigateTo(state!!, path)
+        val state = currentWindow.layoutManager!!.onSaveInstanceState()
+        currentWindow.viewModel.navigateTo(state!!, path)
     }
 
     override fun copyPath(path: Path) {
@@ -803,9 +959,9 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     override fun openInNewTask(path: Path) {
-        val intent = FileListActivity.createViewIntent(path)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-        startActivitySafe(intent)
+        // Opens the directory as a new window page instead of a separate activity, so that
+        // windows can be switched by swiping.
+        addWindow(path, null)
     }
 
     private fun onPickOptionsChanged(pickOptions: PickOptions?) {
@@ -825,14 +981,14 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         updateSelectAllMenuItem()
         updateOverlayToolbar()
         updateBottomToolbar()
-        adapter.pickOptions = pickOptions
+        currentWindow.adapter!!.pickOptions = pickOptions
     }
 
     private fun updateSelectAllMenuItem() {
         if (!this::menuBinding.isInitialized) {
             return
         }
-        val pickOptions = viewModel.pickOptions
+        val pickOptions = currentWindow.viewModel.pickOptions
         menuBinding.selectAllItem.isVisible = pickOptions == null || pickOptions.allowMultiple
     }
 
@@ -842,7 +998,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     private fun pickPaths(paths: LinkedHashSet<Path>) {
         val intent = Intent().apply {
-            val pickOptions = viewModel.pickOptions!!
+            val pickOptions = currentWindow.viewModel.pickOptions!!
             if (paths.size == 1) {
                 val path = paths.single()
                 data = path.fileProviderUri
@@ -872,18 +1028,18 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     private fun onSelectedFilesChanged(files: FileItemSet) {
         updateOverlayToolbar()
-        adapter.replaceSelectedFiles(files)
+        currentWindow.adapter!!.replaceSelectedFiles(files)
     }
 
     private fun updateOverlayToolbar() {
-        val files = viewModel.selectedFiles
+        val files = currentWindow.viewModel.selectedFiles
         if (files.isEmpty()) {
             if (overlayActionMode.isActive) {
                 overlayActionMode.finish()
             }
             return
         }
-        val pickOptions = viewModel.pickOptions
+        val pickOptions = currentWindow.viewModel.pickOptions
         if (pickOptions != null) {
             overlayActionMode.title = getString(R.string.file_list_select_title_format, files.size)
             overlayActionMode.setMenuResource(R.menu.file_list_pick)
@@ -920,13 +1076,13 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             menu.findItem(R.id.action_delete).isVisible = !isAnyFileReadOnly
             val areAllFilesArchiveFiles = files.all { it.isArchiveFile }
             menu.findItem(R.id.action_extract).isVisible = areAllFilesArchiveFiles
-            val isCurrentPathReadOnly = viewModel.currentPath.fileSystem.isReadOnly
+            val isCurrentPathReadOnly = currentWindow.viewModel.currentPath.fileSystem.isReadOnly
             menu.findItem(R.id.action_archive).isVisible = !isCurrentPathReadOnly
         }
         if (!overlayActionMode.isActive) {
             binding.appBarLayout.setExpanded(true)
             binding.appBarLayout.addOnOffsetChangedListener(
-                AppBarLayoutExpandHackListener(binding.recyclerView)
+                AppBarLayoutExpandHackListener(currentWindow.contentBinding.recyclerView)
             )
             overlayActionMode.start(object : ToolbarActionMode.Callback {
                 override fun onToolbarActionModeMenuItemClicked(
@@ -944,35 +1100,35 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     private fun onOverlayActionModeMenuItemClicked(item: MenuItem): Boolean =
         when (item.itemId) {
             R.id.action_open -> {
-                pickFiles(viewModel.selectedFiles)
+                pickFiles(currentWindow.viewModel.selectedFiles)
                 true
             }
             R.id.action_create -> {
-                confirmReplaceFile(viewModel.selectedFiles.single())
+                confirmReplaceFile(currentWindow.viewModel.selectedFiles.single())
                 true
             }
             R.id.action_cut -> {
-                cutFiles(viewModel.selectedFiles)
+                cutFiles(currentWindow.viewModel.selectedFiles)
                 true
             }
             R.id.action_copy -> {
-                copyFiles(viewModel.selectedFiles)
+                copyFiles(currentWindow.viewModel.selectedFiles)
                 true
             }
             R.id.action_delete -> {
-                confirmDeleteFiles(viewModel.selectedFiles)
+                confirmDeleteFiles(currentWindow.viewModel.selectedFiles)
                 true
             }
             R.id.action_extract -> {
-                extractFiles(viewModel.selectedFiles)
+                extractFiles(currentWindow.viewModel.selectedFiles)
                 true
             }
             R.id.action_archive -> {
-                showCreateArchiveDialog(viewModel.selectedFiles)
+                showCreateArchiveDialog(currentWindow.viewModel.selectedFiles)
                 true
             }
             R.id.action_share -> {
-                shareFiles(viewModel.selectedFiles)
+                shareFiles(currentWindow.viewModel.selectedFiles)
                 true
             }
             R.id.action_select_all -> {
@@ -983,7 +1139,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         }
 
     private fun onOverlayActionModeFinished() {
-        viewModel.clearSelectedFiles()
+        currentWindow.viewModel.clearSelectedFiles()
     }
 
     private fun confirmReplaceFile(file: FileItem, setFileName: Boolean = true) {
@@ -1002,13 +1158,13 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun cutFiles(files: FileItemSet) {
-        viewModel.addToPasteState(false, files)
-        viewModel.selectFiles(files, false)
+        currentWindow.viewModel.addToPasteState(false, files)
+        currentWindow.viewModel.selectFiles(files, false)
     }
 
     private fun copyFiles(files: FileItemSet) {
-        viewModel.addToPasteState(true, files)
-        viewModel.selectFiles(files, false)
+        currentWindow.viewModel.addToPasteState(true, files)
+        currentWindow.viewModel.selectFiles(files, false)
     }
 
     private fun confirmDeleteFiles(files: FileItemSet) {
@@ -1017,12 +1173,12 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     override fun deleteFiles(files: FileItemSet) {
         FileJobService.delete(makePathListForJob(files), requireContext())
-        viewModel.selectFiles(files, false)
+        currentWindow.viewModel.selectFiles(files, false)
     }
 
     private fun extractFiles(files: FileItemSet) {
         copyFiles(files.mapTo(fileItemSetOf()) { it.createDummyArchiveRoot() })
-        viewModel.selectFiles(files, false)
+        currentWindow.viewModel.selectFiles(files, false)
     }
 
     private fun showCreateArchiveDialog(files: FileItemSet) {
@@ -1036,20 +1192,20 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         filter: Int,
         password: String?
     ) {
-        val archiveFile = viewModel.currentPath.resolve(name)
+        val archiveFile = currentWindow.viewModel.currentPath.resolve(name)
         FileJobService.archive(
             makePathListForJob(files), archiveFile, format, filter, password, requireContext()
         )
-        viewModel.selectFiles(files, false)
+        currentWindow.viewModel.selectFiles(files, false)
     }
 
     private fun shareFiles(files: FileItemSet) {
         shareFiles(files.map { it.path }, files.map { it.mimeType })
-        viewModel.selectFiles(files, false)
+        currentWindow.viewModel.selectFiles(files, false)
     }
 
     private fun selectAllFiles() {
-        adapter.selectAllFiles()
+        currentWindow.adapter!!.selectAllFiles()
     }
 
     private fun onPasteStateChanged(pasteState: PasteState) {
@@ -1057,7 +1213,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun updateBottomToolbar() {
-        val pickOptions = viewModel.pickOptions
+        val pickOptions = currentWindow.viewModel.pickOptions
         if (pickOptions != null) {
             bottomActionMode.setMenuResource(R.menu.file_list_pick_bottom)
             val menu = bottomActionMode.menu
@@ -1069,20 +1225,20 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                     binding.bottomCreateFileNameEdit.setOnEditorConfirmActionListener {
                         onBottomActionModeMenuItemClicked(createMenuItem)
                     }
-                    if (!viewModel.isCreateFileNameEditInitialized) {
+                    if (!currentWindow.viewModel.isCreateFileNameEditInitialized) {
                         val fileName = pickOptions.fileName!!
                         binding.bottomCreateFileNameEdit.setText(fileName)
                         binding.bottomCreateFileNameEdit.setSelection(
                             0, fileName.asFileName().baseName.length
                         )
                         binding.bottomCreateFileNameEdit.requestFocus()
-                        viewModel.isCreateFileNameEditInitialized = true
+                        currentWindow.viewModel.isCreateFileNameEditInitialized = true
                     }
                     menu.findItem(R.id.action_open).isVisible = false
                     createMenuItem.isVisible = true
                 }
                 PickOptions.Mode.OPEN_DIRECTORY -> {
-                    val path = viewModel.currentPath
+                    val path = currentWindow.viewModel.currentPath
                     val navigationRoot = NavigationRootMapLiveData.valueCompat[path]
                     val name = navigationRoot?.getName(requireContext()) ?: path.name
                     bottomActionMode.title =
@@ -1099,7 +1255,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 }
             }
         } else {
-            val pasteState = viewModel.pasteState
+            val pasteState = currentWindow.viewModel.pasteState
             val files = pasteState.files
             if (files.isEmpty()) {
                 if (bottomActionMode.isActive) {
@@ -1121,7 +1277,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             )
             binding.bottomCreateFileNameEdit.isVisible = false
             bottomActionMode.setMenuResource(R.menu.file_list_paste)
-            val isCurrentPathReadOnly = viewModel.currentPath.fileSystem.isReadOnly
+            val isCurrentPathReadOnly = currentWindow.viewModel.currentPath.fileSystem.isReadOnly
             bottomActionMode.menu.findItem(R.id.action_paste)
                 .setTitle(
                     if (areAllFilesArchivePaths) R.string.file_list_paste_action_extract_here else R.string.paste
@@ -1147,7 +1303,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun onBottomToolbarNavigationIconClicked() {
-        val pickOptions = viewModel.pickOptions
+        val pickOptions = currentWindow.viewModel.pickOptions
         if (pickOptions != null) {
             requireActivity().finish()
         } else {
@@ -1158,7 +1314,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     private fun onBottomActionModeMenuItemClicked(item: MenuItem): Boolean =
         when (item.itemId) {
             R.id.action_open -> {
-                pickPaths(linkedSetOf(viewModel.currentPath))
+                pickPaths(linkedSetOf(currentWindow.viewModel.currentPath))
                 true
             }
             R.id.action_create -> {
@@ -1172,7 +1328,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                     if (file != null) {
                         confirmReplaceFile(file, false)
                     } else {
-                        val path = viewModel.currentPath.resolve(fileName)
+                        val path = currentWindow.viewModel.currentPath.resolve(fileName)
                         pickPaths(linkedSetOf(path))
                     }
                 }
@@ -1186,15 +1342,15 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         }
 
     private fun onBottomActionModeFinished() {
-        val pickOptions = viewModel.pickOptions
+        val pickOptions = currentWindow.viewModel.pickOptions
         if (pickOptions == null) {
-            viewModel.clearPasteState()
+            currentWindow.viewModel.clearPasteState()
         }
     }
 
     private fun pasteFiles(targetDirectory: Path) {
-        val pasteState = viewModel.pasteState
-        if (viewModel.pasteState.copy) {
+        val pasteState = currentWindow.viewModel.pasteState
+        if (currentWindow.viewModel.pasteState.copy) {
             FileJobService.copy(
                 makePathListForJob(pasteState.files), targetDirectory, requireContext()
             )
@@ -1203,30 +1359,30 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 makePathListForJob(pasteState.files), targetDirectory, requireContext()
             )
         }
-        viewModel.clearPasteState()
+        currentWindow.viewModel.clearPasteState()
     }
 
     private fun makePathListForJob(files: FileItemSet): List<Path> =
         files.map { it.path }.sortedBy { it.toUri() }
 
     private fun onFileNameEllipsizeChanged(fileNameEllipsize: TextUtils.TruncateAt) {
-        adapter.nameEllipsize = fileNameEllipsize
+        currentWindow.adapter!!.nameEllipsize = fileNameEllipsize
     }
 
     override fun clearSelectedFiles() {
-        viewModel.clearSelectedFiles()
+        currentWindow.viewModel.clearSelectedFiles()
     }
 
     override fun selectFile(file: FileItem, selected: Boolean) {
-        viewModel.selectFile(file, selected)
+        currentWindow.viewModel.selectFile(file, selected)
     }
 
     override fun selectFiles(files: FileItemSet, selected: Boolean) {
-        viewModel.selectFiles(files, selected)
+        currentWindow.viewModel.selectFiles(files, selected)
     }
 
     override fun openFile(file: FileItem) {
-        val pickOptions = viewModel.pickOptions
+        val pickOptions = currentWindow.viewModel.pickOptions
         if (pickOptions != null) {
             if (file.attributes.isDirectory) {
                 navigateTo(file.path)
@@ -1339,8 +1495,8 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         }
         var paths = mutableListOf<Path>()
         // We need the ordered list from our adapter instead of the list from FileListLiveData.
-        for (index in 0..<adapter.itemCount) {
-            val file = adapter.getItem(index)
+        for (index in 0..<currentWindow.adapter!!.itemCount) {
+            val file = currentWindow.adapter!!.getItem(index)
             val filePath = file.path
             if (file.mimeType.isImage || filePath == path) {
                 paths.add(filePath)
@@ -1379,7 +1535,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     override fun hasFileWithName(name: String): Boolean = getFileWithName(name) != null
 
     private fun getFileWithName(name: String): FileItem? {
-        val fileListData = viewModel.fileListStateful
+        val fileListData = currentWindow.viewModel.fileListStateful
         if (fileListData !is Success) {
             return null
         }
@@ -1388,7 +1544,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     override fun renameFile(file: FileItem, newName: String) {
         FileJobService.rename(file.path, newName, requireContext())
-        viewModel.selectFile(file, false)
+        currentWindow.viewModel.selectFile(file, false)
     }
 
     override fun extractFile(file: FileItem) {
@@ -1456,11 +1612,11 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     override val currentPath: Path
-        get() = viewModel.currentPath
+        get() = currentWindow.viewModel.currentPath
 
     override fun navigateToRoot(path: Path) {
         collapseSearchView()
-        viewModel.resetTo(path)
+        currentWindow.viewModel.resetTo(path)
     }
 
     override fun navigateToDefaultRoot() {
@@ -1468,7 +1624,8 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     override fun observeCurrentPath(owner: LifecycleOwner, observer: (Path) -> Unit) {
-        viewModel.currentPathLiveData.observe(owner, observer)
+        navigationPathObservers += owner to observer
+        observer(currentWindow.viewModel.currentPath)
     }
 
     override fun closeNavigationDrawer() {
@@ -1476,13 +1633,13 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun ensureStorageAccess() {
-        if (viewModel.isStorageAccessRequested) {
+        if (currentWindow.viewModel.isStorageAccessRequested) {
             return
         }
         if (Environment::class.supportsExternalStorageManager()) {
             if (!Environment.isExternalStorageManager()) {
                 ShowRequestAllFilesAccessRationaleDialogFragment.show(this)
-                viewModel.isStorageAccessRequested = true
+                currentWindow.viewModel.isStorageAccessRequested = true
             }
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
@@ -1495,7 +1652,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 } else {
                     requestStoragePermission()
                 }
-                viewModel.isStorageAccessRequested = true
+                currentWindow.viewModel.isStorageAccessRequested = true
             }
         }
     }
@@ -1504,7 +1661,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         if (shouldRequest) {
             requestAllFilesAccess()
         } else {
-            viewModel.isStorageAccessRequested = false
+            currentWindow.viewModel.isStorageAccessRequested = false
             // This isn't an onActivityResult() callback so it's not delivered before calling
             // onResume(), and we need to do this manually.
             ensureNotificationPermission()
@@ -1516,7 +1673,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun onRequestAllFilesAccessResult(isGranted: Boolean) {
-        viewModel.isStorageAccessRequested = false
+        currentWindow.viewModel.isStorageAccessRequested = false
         if (isGranted) {
             refresh()
         }
@@ -1526,7 +1683,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         if (shouldRequest) {
             requestStoragePermission()
         } else {
-            viewModel.isStorageAccessRequested = false
+            currentWindow.viewModel.isStorageAccessRequested = false
         }
     }
 
@@ -1536,7 +1693,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     private fun onRequestStoragePermissionResult(isGranted: Boolean) {
         if (isGranted) {
-            viewModel.isStorageAccessRequested = false
+            currentWindow.viewModel.isStorageAccessRequested = false
             refresh()
         } else if (shouldShowRequestPermissionRationale(
             android.Manifest.permission.WRITE_EXTERNAL_STORAGE
@@ -1551,7 +1708,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         if (shouldRequest) {
             requestStoragePermissionInSettings()
         } else {
-            viewModel.isStorageAccessRequested = false
+            currentWindow.viewModel.isStorageAccessRequested = false
         }
     }
 
@@ -1560,14 +1717,14 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun onRequestStoragePermissionInSettingsResult(isGranted: Boolean) {
-        viewModel.isStorageAccessRequested = false
+        currentWindow.viewModel.isStorageAccessRequested = false
         if (isGranted) {
             refresh()
         }
     }
 
     private fun ensureNotificationPermission() {
-        if (viewModel.isNotificationPermissionRequested) {
+        if (currentWindow.viewModel.isNotificationPermissionRequested) {
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -1580,7 +1737,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 } else {
                     requestNotificationPermission()
                 }
-                viewModel.isNotificationPermissionRequested = true
+                currentWindow.viewModel.isNotificationPermissionRequested = true
             }
         }
     }
@@ -1590,7 +1747,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         if (shouldRequest) {
             requestNotificationPermission()
         } else {
-            viewModel.isNotificationPermissionRequested = false
+            currentWindow.viewModel.isNotificationPermissionRequested = false
         }
     }
 
@@ -1602,7 +1759,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun onRequestNotificationPermissionResult(isGranted: Boolean) {
         if (isGranted) {
-            viewModel.isNotificationPermissionRequested = false
+            currentWindow.viewModel.isNotificationPermissionRequested = false
         } else if (shouldShowRequestPermissionRationale(
             android.Manifest.permission.POST_NOTIFICATIONS
         )) {
@@ -1619,7 +1776,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         if (shouldRequest) {
             requestNotificationPermissionInSettings()
         } else {
-            viewModel.isNotificationPermissionRequested = false
+            currentWindow.viewModel.isNotificationPermissionRequested = false
         }
     }
 
@@ -1631,13 +1788,19 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun onRequestNotificationPermissionInSettingsResult(isGranted: Boolean) {
         if (isGranted) {
-            viewModel.isNotificationPermissionRequested = false
+            currentWindow.viewModel.isNotificationPermissionRequested = false
         }
     }
 
     companion object {
         private const val ACTION_VIEW_DOWNLOADS =
             "me.zhanghai.android.files.intent.action.VIEW_DOWNLOADS"
+
+        private const val STATE_WINDOWS = "me.zhanghai.android.files.filelist.state.WINDOWS"
+        private const val STATE_CURRENT_WINDOW =
+            "me.zhanghai.android.files.filelist.state.CURRENT_WINDOW"
+        private const val STATE_NEXT_WINDOW_ID =
+            "me.zhanghai.android.files.filelist.state.NEXT_WINDOW_ID"
 
         private const val IMAGE_VIEWER_ACTIVITY_PATH_LIST_SIZE_MAX = 1000
     }
@@ -1677,12 +1840,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         val toolbar: Toolbar,
         val overlayToolbar: Toolbar,
         val breadcrumbLayout: BreadcrumbLayout,
-        val contentLayout: ViewGroup,
-        val progress: ProgressBar,
-        val errorText: TextView,
-        val emptyView: View,
-        val swipeRefreshLayout: SwipeRefreshLayout,
-        val recyclerView: RecyclerView,
+        val contentPager: ViewPager2,
         val bottomBarLayout: ViewGroup,
         val bottomToolbar: Toolbar,
         val bottomCreateFileNameEdit: EditText,
@@ -1698,16 +1856,14 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 val bindingRoot = binding.root
                 val includeBinding = FileListFragmentIncludeBinding.bind(bindingRoot)
                 val appBarBinding = FileListFragmentAppBarIncludeBinding.bind(bindingRoot)
-                val contentBinding = FileListFragmentContentIncludeBinding.bind(bindingRoot)
                 val bottomBarBinding = FileListFragmentBottomBarIncludeBinding.bind(bindingRoot)
                 val speedDialBinding = FileListFragmentSpeedDialIncludeBinding.bind(bindingRoot)
                 return Binding(
                     bindingRoot, includeBinding.drawerLayout, includeBinding.persistentDrawerLayout,
                     includeBinding.persistentBarLayout, appBarBinding.appBarLayout,
                     appBarBinding.toolbar, appBarBinding.overlayToolbar,
-                    appBarBinding.breadcrumbLayout, contentBinding.contentLayout,
-                    contentBinding.progress, contentBinding.errorText, contentBinding.emptyView,
-                    contentBinding.swipeRefreshLayout, contentBinding.recyclerView,
+                    appBarBinding.breadcrumbLayout,
+                    bindingRoot.findViewById(R.id.contentPager),
                     bottomBarBinding.bottomBarLayout, bottomBarBinding.bottomToolbar,
                     bottomBarBinding.bottomCreateFileNameEdit, speedDialBinding.speedDialView
                 )

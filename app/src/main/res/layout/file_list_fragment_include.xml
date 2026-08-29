@@ -31,7 +31,10 @@
 
                     <include layout="@layout/file_list_fragment_app_bar_include" />
 
-                    <include layout="@layout/file_list_fragment_content_include" />
+                    <androidx.viewpager2.widget.ViewPager2
+                        android:id="@+id/contentPager"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
 
                 </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
