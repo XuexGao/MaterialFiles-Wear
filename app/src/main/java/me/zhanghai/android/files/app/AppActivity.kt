@@ -14,8 +14,8 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.FragmentLifecycleCallbacks
 import me.zhanghai.android.files.settings.Settings
+import me.zhanghai.android.files.util.valueCompat
 import me.zhanghai.android.files.theme.custom.CustomThemeHelper
 import me.zhanghai.android.files.theme.night.NightModeHelper
 import me.zhanghai.android.files.ui.FontScaleHelper
@@ -59,7 +59,7 @@ abstract class AppActivity : AppCompatActivity() {
         // Display every dialog fullscreen when the watch setting asks for it, in one place for
         // all of the DialogFragments in the app, including those in child fragment managers.
         supportFragmentManager.registerFragmentLifecycleCallbacks(
-            object : FragmentLifecycleCallbacks() {
+            object : FragmentManager.FragmentLifecycleCallbacks() {
                 override fun onFragmentStarted(
                     fragmentManager: FragmentManager,
                     fragment: Fragment
