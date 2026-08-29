@@ -500,21 +500,32 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     /** Pushes the current window's state into the shared chrome after a window switch. */
     private fun onCurrentWindowChanged() {
-        onCurrentPathChanged(currentWindow.viewModel.currentPath)
-        onSearchViewExpandedChanged(currentWindow.viewModel.searchViewExpandedLiveData.valueCompat)
-        currentWindow.viewModel.breadcrumbLiveData.value?.let {
-            binding.breadcrumbLayout.setData(it)
+        val viewModel = currentWindow.viewModel
+        // Several live data are derived and only compute their value once observed, so every
+        // read here tolerates a missing value: a window that was just created will push the
+        // rest of its state through its own observers once it becomes active.
+        onCurrentPathChanged(viewModel.currentPath)
+        viewModel.searchViewExpandedLiveData.value?.let {
+            onSearchViewExpandedChanged(it)
         }
-        breadcrumbBackPressCallback.isEnabled = currentWindow.viewModel.canNavigateUpBreadcrumb
-        onViewTypeChanged(currentWindow.viewModel.viewTypeLiveData.valueCompat)
-        onSortOptionsChanged(currentWindow.viewModel.sortOptionsLiveData.valueCompat)
-        onViewSortPathSpecificChanged(currentWindow.viewModel.viewSortPathSpecificLiveData.valueCompat)
-        onPickOptionsChanged(currentWindow.viewModel.pickOptionsLiveData.valueCompat)
-        onSelectedFilesChanged(currentWindow.viewModel.selectedFilesLiveData.valueCompat)
-        onPasteStateChanged(currentWindow.viewModel.pasteStateLiveData.valueCompat)
-        onFileListChanged(currentWindow.viewModel.fileListStateful)
+        val breadcrumb = viewModel.breadcrumbLiveData.value
+        if (breadcrumb != null) {
+            binding.breadcrumbLayout.setData(breadcrumb)
+            breadcrumbBackPressCallback.isEnabled = breadcrumb.selectedIndex > 0
+        } else {
+            breadcrumbBackPressCallback.isEnabled = false
+        }
+        viewModel.viewTypeLiveData.value?.let { onViewTypeChanged(it) }
+        viewModel.sortOptionsLiveData.value?.let { onSortOptionsChanged(it) }
+        viewModel.viewSortPathSpecificLiveData.value?.let {
+            onViewSortPathSpecificChanged(it)
+        }
+        viewModel.pickOptionsLiveData.value?.let { onPickOptionsChanged(it) }
+        viewModel.selectedFilesLiveData.value?.let { onSelectedFilesChanged(it) }
+        viewModel.pasteStateLiveData.value?.let { onPasteStateChanged(it) }
+        viewModel.fileListLiveData.value?.let { onFileListChanged(it) }
         for ((_, observer) in navigationPathObservers) {
-            observer(currentWindow.viewModel.currentPath)
+            observer(viewModel.currentPath)
         }
     }
 
