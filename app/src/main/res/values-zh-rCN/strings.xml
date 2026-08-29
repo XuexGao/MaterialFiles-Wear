@@ -603,9 +603,8 @@
     <string name="settings_ui_scale_summary">按百分比缩小或放大整个界面，适配小屏幕手表</string>
     <string name="settings_ui_scale_value_format">当前缩放:%d%%</string>
 
-    <string name="settings_dialog_scale_title">弹窗缩放</string>
-    <string name="settings_dialog_scale_summary">在界面缩放的基础上进一步缩放弹窗</string>
-    <string name="settings_dialog_scale_value_format">当前缩放:%d%%</string>
+    <string name="settings_dialog_fullscreen_title">弹窗全屏</string>
+    <string name="settings_dialog_fullscreen_summary">弹窗以全屏方式显示，适配小屏幕手表</string>
     <string name="settings_font_scale_title">字体缩放</string>
     <string name="settings_font_scale_summary">在系统字体大小的基础上调整应用内文字大小</string>
     <string name="settings_file_list_animation_title">文件列表动画</string>

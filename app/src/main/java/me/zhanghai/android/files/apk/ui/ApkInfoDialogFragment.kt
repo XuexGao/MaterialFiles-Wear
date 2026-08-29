@@ -6,14 +6,13 @@
 package me.zhanghai.android.files.apk.ui
 
 import android.app.Dialog
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
-import android.util.Log
 import android.widget.TextView
+import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDialogFragment
 import androidx.appcompat.widget.PopupMenu
@@ -32,7 +31,6 @@ import me.zhanghai.android.files.compat.getDrawableCompat
 import me.zhanghai.android.files.compat.longVersionCodeCompat
 import me.zhanghai.android.files.databinding.DialogApkInfoBinding
 import me.zhanghai.android.files.file.asFileSize
-import me.zhanghai.android.files.ui.DialogScaleHelper
 import me.zhanghai.android.files.util.layoutInflater
 import me.zhanghai.android.files.util.showToast
 import me.zhanghai.android.files.util.startActivitySafe
@@ -55,24 +53,9 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        // The dialog itself must be built on the activity context (a scaled configuration
-        // context has no window token and crashes on show), so only the content view is
-        // inflated at the dialog-scaled density.
-        return try {
-            createDialog(requireContext()) { DialogScaleHelper.wrapInflaterContext(it) }
-        } catch (e: Exception) {
-            Log.e("ApkInfoDialog", "Failed to build the scaled dialog", e)
-            createDialog(requireContext()) { it }
-        }
-    }
-
-    private fun createDialog(
-        context: Context,
-        wrapContentViewContext: (Context) -> Context
-    ): Dialog {
-        binding = DialogApkInfoBinding.inflate(wrapContentViewContext(context).layoutInflater)
+        binding = DialogApkInfoBinding.inflate(layoutInflater)
         populateViews()
-        return MaterialAlertDialogBuilder(context, theme)
+        return MaterialAlertDialogBuilder(requireContext(), theme)
             .setView(binding.root)
             // The neutral button lands on the left of the dialog's button bar, like the overflow
             // menu in the main screen, and shares the exact style of the extract button.
@@ -83,6 +66,14 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
 
     override fun onStart() {
         super.onStart()
+
+        // Display the dialog fullscreen when the watch setting asks for it; the default window
+        // size is too small for dialogs with a lot of content on small screens.
+        if (me.zhanghai.android.files.settings.Settings.DIALOG_FULLSCREEN.valueCompat) {
+            dialog?.window?.setLayout(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
 
         // Replace the neutral button's click listener so that showing the more menu doesn't
         // dismiss the dialog.

@@ -751,9 +751,8 @@
     <string name="settings_ui_scale_summary">Shrink or enlarge the entire interface as a percentage, for small watch screens</string>
     <string name="settings_ui_scale_value_format">Current scale: %d%%</string>
 
-    <string name="settings_dialog_scale_title">Dialog scale</string>
-    <string name="settings_dialog_scale_summary">Further scale dialogs on top of the UI scale</string>
-    <string name="settings_dialog_scale_value_format">Current scale: %d%%</string>
+    <string name="settings_dialog_fullscreen_title">Fullscreen dialogs</string>
+    <string name="settings_dialog_fullscreen_summary">Display dialogs fullscreen to fit small watch screens</string>
     <string name="settings_font_scale_title">Font scale</string>
     <string name="settings_font_scale_summary">Scale text on top of the system font size</string>
     <string-array name="settings_font_scale_entries">

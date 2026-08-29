@@ -128,6 +128,12 @@ object Settings {
     val UI_SCALE: SettingLiveData<Int> =
         IntegerSettingLiveData(R.string.pref_key_ui_scale, R.integer.pref_default_value_ui_scale)
 
+    /** Whether dialogs are displayed fullscreen to fit small watch screens. */
+    val DIALOG_FULLSCREEN: SettingLiveData<Boolean> =
+        BooleanSettingLiveData(
+            R.string.pref_key_dialog_fullscreen, R.bool.pref_default_value_dialog_fullscreen
+        )
+
     /**
      * The font scale in percent, applied on top of the system font scale. P100 means unscaled.
      */

@@ -12,8 +12,8 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.text.TextUtils
-import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.annotation.LayoutRes
@@ -22,6 +22,7 @@ import androidx.appcompat.app.AppCompatDialogFragment
 import androidx.preference.DialogPreference
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.parcelize.Parcelize
+import me.zhanghai.android.files.settings.Settings
 import me.zhanghai.android.files.util.ParcelableState
 import me.zhanghai.android.files.util.getState
 import me.zhanghai.android.files.util.layoutInflater
@@ -86,30 +87,27 @@ abstract class MaterialPreferenceDialogFragmentCompat : AppCompatDialogFragment(
         )
     }
 
-    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        whichButtonClicked = DialogInterface.BUTTON_NEGATIVE
-        // The dialog itself must be built on the activity context (a scaled configuration
-        // context has no window token and crashes on show), so only the content view is
-        // inflated at the dialog-scaled density.
-        return try {
-            createDialog(requireContext()) { DialogScaleHelper.wrapInflaterContext(it) }
-        } catch (e: Exception) {
-            Log.e("MaterialPreferenceDialog", "Failed to build the scaled dialog", e)
-            createDialog(requireContext()) { it }
+    override fun onStart() {
+        super.onStart()
+
+        // Display the dialog fullscreen when the watch setting asks for it; the default window
+        // size is too small for dialogs with a lot of content on small screens.
+        if (Settings.DIALOG_FULLSCREEN.valueCompat) {
+            dialog?.window?.setLayout(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+            )
         }
     }
 
-    private fun createDialog(
-        context: Context,
-        wrapContentViewContext: (Context) -> Context
-    ): Dialog {
-        val dialog = MaterialAlertDialogBuilder(context, theme)
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        whichButtonClicked = DialogInterface.BUTTON_NEGATIVE
+        val dialog = MaterialAlertDialogBuilder(requireContext(), theme)
             .setTitle(dialogTitle)
             .setIcon(dialogIcon)
             .setPositiveButton(positiveButtonText, this)
             .setNegativeButton(negativeButtonText, this)
             .apply {
-                val contentView = onCreateDialogView(wrapContentViewContext(context))
+                val contentView = onCreateDialogView(context)
                 if (contentView != null) {
                     onBindDialogView(contentView)
                     setView(contentView)
