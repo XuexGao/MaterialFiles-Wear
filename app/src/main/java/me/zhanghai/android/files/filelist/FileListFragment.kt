@@ -504,7 +504,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         // Several live data are derived and only compute their value once observed, so every
         // read here tolerates a missing value: a window that was just created will push the
         // rest of its state through its own observers once it becomes active.
-        onCurrentPathChanged(viewModel.currentPath)
+        viewModel.currentPathLiveData.value?.let { onCurrentPathChanged(it) }
         viewModel.searchViewExpandedLiveData.value?.let {
             onSearchViewExpandedChanged(it)
         }
@@ -524,8 +524,10 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         viewModel.selectedFilesLiveData.value?.let { onSelectedFilesChanged(it) }
         viewModel.pasteStateLiveData.value?.let { onPasteStateChanged(it) }
         viewModel.fileListLiveData.value?.let { onFileListChanged(it) }
-        for ((_, observer) in navigationPathObservers) {
-            observer(viewModel.currentPath)
+        viewModel.currentPathLiveData.value?.let { path ->
+            for ((_, observer) in navigationPathObservers) {
+                observer(path)
+            }
         }
     }
 
@@ -1644,7 +1646,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     override fun observeCurrentPath(owner: LifecycleOwner, observer: (Path) -> Unit) {
         navigationPathObservers += owner to observer
-        observer(currentWindow.viewModel.currentPath)
+        currentWindow.viewModel.currentPathLiveData.value?.let { observer(it) }
     }
 
     override fun closeNavigationDrawer() {
