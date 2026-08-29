@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  ~ Copyright (c) 2025 XuexGao <MaterialFiles-Wear>
+  ~ All Rights Reserved.
+  -->
+
+<resources>
+
+    <!-- Small watch screens get fullscreen dialogs by default; larger screens, which can fit
+         the regular floating dialogs, override the watch default to false. -->
+    <bool name="pref_default_value_dialog_fullscreen">false</bool>
+
+</resources>

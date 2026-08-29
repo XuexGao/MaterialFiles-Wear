@@ -13,7 +13,6 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.text.TextUtils
 import android.view.View
-import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.annotation.LayoutRes
@@ -22,13 +21,11 @@ import androidx.appcompat.app.AppCompatDialogFragment
 import androidx.preference.DialogPreference
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.parcelize.Parcelize
-import me.zhanghai.android.files.settings.Settings
 import me.zhanghai.android.files.util.ParcelableState
 import me.zhanghai.android.files.util.getState
 import me.zhanghai.android.files.util.layoutInflater
 import me.zhanghai.android.files.util.putState
 import me.zhanghai.android.files.util.toBitmapDrawable
-import me.zhanghai.android.files.util.valueCompat
 
 /**
  * @see androidx.preference.PreferenceDialogFragmentCompat
@@ -86,28 +83,6 @@ abstract class MaterialPreferenceDialogFragmentCompat : AppCompatDialogFragment(
                 dialogIcon?.bitmap
             )
         )
-    }
-
-    override fun onStart() {
-        super.onStart()
-
-        // Display the dialog fullscreen when the watch setting asks for it; the default window
-        // size is too small for dialogs with a lot of content on small screens.
-        if (Settings.DIALOG_FULLSCREEN.valueCompat) {
-            dialog?.window?.apply {
-                setLayout(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-                )
-                // The Material dialog background is an inset drawable that keeps margins around
-                // the window even at MATCH_PARENT; replace it with an opaque surface color so
-                // the dialog really covers the whole screen.
-                val typedArray = context.obtainStyledAttributes(
-                    intArrayOf(android.R.attr.colorBackground)
-                )
-                setBackgroundDrawable(typedArray.getDrawable(0))
-                typedArray.recycle()
-            }
-        }
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {

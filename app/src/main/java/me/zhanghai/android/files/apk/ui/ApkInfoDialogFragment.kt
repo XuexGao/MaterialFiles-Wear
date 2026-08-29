@@ -12,7 +12,6 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
 import android.widget.TextView
-import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDialogFragment
 import androidx.appcompat.widget.PopupMenu
@@ -33,7 +32,6 @@ import me.zhanghai.android.files.databinding.DialogApkInfoBinding
 import me.zhanghai.android.files.file.asFileSize
 import me.zhanghai.android.files.util.layoutInflater
 import me.zhanghai.android.files.util.showToast
-import me.zhanghai.android.files.util.valueCompat
 import me.zhanghai.android.files.util.startActivitySafe
 
 class ApkInfoDialogFragment : AppCompatDialogFragment() {
@@ -67,24 +65,6 @@ class ApkInfoDialogFragment : AppCompatDialogFragment() {
 
     override fun onStart() {
         super.onStart()
-
-        // Display the dialog fullscreen when the watch setting asks for it; the default window
-        // size is too small for dialogs with a lot of content on small screens.
-        if (me.zhanghai.android.files.settings.Settings.DIALOG_FULLSCREEN.valueCompat) {
-            dialog?.window?.apply {
-                setLayout(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-                )
-                // The Material dialog background is an inset drawable that keeps margins around
-                // the window even at MATCH_PARENT; replace it with an opaque surface color so
-                // the dialog really covers the whole screen.
-                val typedArray = context.obtainStyledAttributes(
-                    intArrayOf(android.R.attr.colorBackground)
-                )
-                setBackgroundDrawable(typedArray.getDrawable(0))
-                typedArray.recycle()
-            }
-        }
 
         // Replace the neutral button's click listener so that showing the more menu doesn't
         // dismiss the dialog.
