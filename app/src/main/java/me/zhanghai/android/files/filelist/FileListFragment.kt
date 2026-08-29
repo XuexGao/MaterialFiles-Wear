@@ -585,16 +585,27 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     private inner class WindowPagerAdapter :
         RecyclerView.Adapter<WindowPagerAdapter.ViewHolder>() {
 
-        inner class ViewHolder(val pageBinding: FileListFragmentWindowPageBinding) :
-            RecyclerView.ViewHolder(pageBinding.root)
+        inner class ViewHolder(
+            val pageBinding: FileListFragmentWindowPageBinding,
+            val contentBinding: FileListFragmentContentIncludeBinding
+        ) : RecyclerView.ViewHolder(pageBinding.root)
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
-            ViewHolder(FileListFragmentWindowPageBinding.inflate(layoutInflater, parent, false))
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            // The content include has a <merge> root, so it is merged into the page by code:
+            // bindings cannot reference an include of a merge layout.
+            val pageBinding = FileListFragmentWindowPageBinding.inflate(
+                layoutInflater, parent, false
+            )
+            val contentBinding = FileListFragmentContentIncludeBinding.inflate(
+                layoutInflater, pageBinding.root, true
+            )
+            return ViewHolder(pageBinding, contentBinding)
+        }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val window = windows[position]
-            if (window.contentBinding !== holder.pageBinding.contentInclude) {
-                window.contentBinding = holder.pageBinding.contentInclude
+            if (window.contentBinding !== holder.contentBinding) {
+                window.contentBinding = holder.contentBinding
                 setupWindowContent(window)
                 if (window === currentWindow) {
                     onCurrentWindowChanged()
