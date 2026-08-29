@@ -547,7 +547,13 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     private fun setupWindowContent(window: Window) {
         val contentBinding = window.contentBinding ?: return
-        window.adapter = FileListAdapter(this)
+        window.adapter = FileListAdapter(this).also { adapter ->
+            // The adapter is created after the settings live data dispatched, so its lateinit
+            // state has to be initialized here from the current values.
+            adapter.nameEllipsize = Settings.FILE_NAME_ELLIPSIZE.valueCompat
+            window.viewModel.viewTypeLiveData.value?.let { adapter.viewType = it }
+            window.viewModel.sortOptionsLiveData.value?.let { adapter.sortOptions = it }
+        }
         window.layoutManager = GridLayoutManager(requireActivity(), 1)
         contentBinding.recyclerView.layoutManager = window.layoutManager
         contentBinding.recyclerView.adapter = window.adapter
