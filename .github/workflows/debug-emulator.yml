@@ -39,11 +39,15 @@ jobs:
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb shell am start -n "com.xuexgao.android.files/me.zhanghai.android.files.filelist.FileListActivity"
             sleep 20
+            adb shell uiautomator dump /sdcard/ui.xml || true
+            adb pull /sdcard/ui.xml ui.xml || true
             adb logcat -d > logcat.txt
 
       - name: Upload logcat
         uses: actions/upload-artifact@v7
         with:
           name: debug-logcat
-          path: logcat.txt
+          path: |
+            logcat.txt
+            ui.xml
           retention-days: 7
