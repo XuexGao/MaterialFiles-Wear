@@ -63,6 +63,7 @@ import me.zhanghai.android.files.databinding.FileListFragmentBinding
 import me.zhanghai.android.files.databinding.FileListFragmentBottomBarIncludeBinding
 import me.zhanghai.android.files.databinding.FileListFragmentContentIncludeBinding
 import me.zhanghai.android.files.databinding.FileListFragmentIncludeBinding
+import me.zhanghai.android.files.databinding.FileListFragmentWindowPageBinding
 import me.zhanghai.android.files.databinding.FileListFragmentSpeedDialIncludeBinding
 import me.zhanghai.android.files.file.FileItem
 import me.zhanghai.android.files.file.MimeType
@@ -582,6 +583,9 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             if (window.contentBinding !== holder.pageBinding.contentInclude) {
                 window.contentBinding = holder.pageBinding.contentInclude
                 setupWindowContent(window)
+                if (window === currentWindow) {
+                    onCurrentWindowChanged()
+                }
             }
         }
 
@@ -759,6 +763,10 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun onFileListChanged(stateful: Stateful<List<FileItem>>) {
+        if (currentWindow.contentBinding == null || currentWindow.adapter == null) {
+            return
+        }
+
         val files = stateful.value
         val isSearching = currentWindow.viewModel.searchState.isSearching
         when {
@@ -767,9 +775,11 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             else -> binding.toolbar.subtitle = getSubtitle(files!!)
         }
         val hasFiles = !files.isNullOrEmpty()
-        currentWindow.contentBinding?.swipeRefreshLayout.isRefreshing = stateful is Loading && (hasFiles || isSearching)
-        currentWindow.contentBinding?.progress.fadeToVisibilityUnsafe(stateful is Loading && !(hasFiles || isSearching))
-        currentWindow.contentBinding?.errorText.fadeToVisibilityUnsafe(stateful is Failure && !hasFiles)
+        currentWindow.contentBinding?.swipeRefreshLayout?.let {
+            it.isRefreshing = stateful is Loading && (hasFiles || isSearching)
+        }
+        currentWindow.contentBinding?.progress?.fadeToVisibilityUnsafe(stateful is Loading && !(hasFiles || isSearching))
+        currentWindow.contentBinding?.errorText?.fadeToVisibilityUnsafe(stateful is Failure && !hasFiles)
         val throwable = (stateful as? Failure)?.throwable
         if (throwable != null) {
             throwable.printStackTrace()
@@ -777,10 +787,10 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             if (hasFiles) {
                 showToast(error)
             } else {
-                currentWindow.contentBinding?.errorText.text = error
+                currentWindow.contentBinding?.errorText?.let { it.text = error }
             }
         }
-        currentWindow.contentBinding?.emptyView.fadeToVisibilityUnsafe(stateful is Success && !hasFiles)
+        currentWindow.contentBinding?.emptyView?.fadeToVisibilityUnsafe(stateful is Success && !hasFiles)
         if (files != null) {
             updateAdapterFileList()
         } else {
@@ -788,7 +798,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             currentWindow.adapter!!.clear()
         }
         if (stateful is Success) {
-            currentWindow.viewModel.pendingState?.let { currentWindow.layoutManager!!.onRestoreInstanceState(it) }
+            currentWindow.viewModel.pendingState?.let { currentWindow.layoutManager?.onRestoreInstanceState(it) }
         }
     }
 
@@ -820,13 +830,18 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun onViewTypeChanged(viewType: FileViewType) {
+        if (currentWindow.contentBinding == null || currentWindow.adapter == null ||
+            currentWindow.layoutManager == null
+        ) {
+            return
+        }
         updateSpanCount()
         currentWindow.adapter!!.viewType = viewType
         updateViewSortMenuItems()
     }
 
     private fun updateSpanCount() {
-        currentWindow.layoutManager!!.spanCount = when (currentWindow.viewModel.viewType) {
+        currentWindow.layoutManager?.spanCount = when (currentWindow.viewModel.viewType) {
             FileViewType.LIST -> 1
             FileViewType.GRID -> {
                 var widthDp = resources.configuration.screenWidthDp
@@ -904,11 +919,12 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun updateAdapterFileList() {
+        val adapter = currentWindow.adapter ?: return
         var files = currentWindow.viewModel.fileListStateful.value ?: return
         if (!Settings.FILE_LIST_SHOW_HIDDEN_FILES.valueCompat) {
             files = files.filterNot { it.isHidden }
         }
-        currentWindow.adapter!!.replaceListAndIsSearching(files, currentWindow.viewModel.searchState.isSearching)
+        adapter.replaceListAndIsSearching(files, currentWindow.viewModel.searchState.isSearching)
     }
 
     private fun updateShowHiddenFilesMenuItem() {
@@ -1069,9 +1085,11 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         }
         if (!overlayActionMode.isActive) {
             binding.appBarLayout.setExpanded(true)
-            binding.appBarLayout.addOnOffsetChangedListener(
-                AppBarLayoutExpandHackListener(currentWindow.contentBinding?.recyclerView)
-            )
+            currentWindow.contentBinding?.recyclerView?.let { recyclerView ->
+                binding.appBarLayout.addOnOffsetChangedListener(
+                    AppBarLayoutExpandHackListener(recyclerView)
+                )
+            }
             overlayActionMode.start(object : ToolbarActionMode.Callback {
                 override fun onToolbarActionModeMenuItemClicked(
                     toolbarActionMode: ToolbarActionMode,
