@@ -37,6 +37,8 @@ jobs:
           arch: x86_64
           script: |
             adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb shell pm grant com.xuexgao.android.files android.permission.READ_EXTERNAL_STORAGE || true
+            adb shell pm grant com.xuexgao.android.files android.permission.WRITE_EXTERNAL_STORAGE || true
             adb shell am start -n "com.xuexgao.android.files/me.zhanghai.android.files.filelist.FileListActivity"
             sleep 20
             adb shell uiautomator dump /sdcard/ui.xml || true
