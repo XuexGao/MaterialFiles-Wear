@@ -459,7 +459,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         window.viewModel.breadcrumbLiveData.observe(viewLifecycleOwner) {
             if (window === currentWindow) {
                 binding.breadcrumbLayout.setData(it)
-                breadcrumbBackPressCallback.isEnabled = window.currentWindow.viewModel.canNavigateUpBreadcrumb
+                breadcrumbBackPressCallback.isEnabled = currentWindow.viewModel.canNavigateUpBreadcrumb
             }
         }
         window.viewModel.viewTypeLiveData.observe(viewLifecycleOwner) {
@@ -501,22 +501,21 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     /** Pushes the current window's state into the shared chrome after a window switch. */
     private fun onCurrentWindowChanged() {
-        val window = currentWindow
-        onCurrentPathChanged(window.currentWindow.viewModel.currentPath)
-        onSearchViewExpandedChanged(window.currentWindow.viewModel.searchViewExpandedLiveData.valueCompat)
-        window.currentWindow.viewModel.breadcrumbLiveData.value?.let {
+        onCurrentPathChanged(currentWindow.viewModel.currentPath)
+        onSearchViewExpandedChanged(currentWindow.viewModel.searchViewExpandedLiveData.valueCompat)
+        currentWindow.viewModel.breadcrumbLiveData.value?.let {
             binding.breadcrumbLayout.setData(it)
         }
-        breadcrumbBackPressCallback.isEnabled = window.currentWindow.viewModel.canNavigateUpBreadcrumb
-        onViewTypeChanged(window.currentWindow.viewModel.viewTypeLiveData.valueCompat)
-        onSortOptionsChanged(window.currentWindow.viewModel.sortOptionsLiveData.valueCompat)
-        onViewSortPathSpecificChanged(window.currentWindow.viewModel.viewSortPathSpecificLiveData.valueCompat)
-        onPickOptionsChanged(window.currentWindow.viewModel.pickOptionsLiveData.valueCompat)
-        onSelectedFilesChanged(window.currentWindow.viewModel.selectedFilesLiveData.valueCompat)
-        onPasteStateChanged(window.currentWindow.viewModel.pasteStateLiveData.valueCompat)
-        onFileListChanged(window.currentWindow.viewModel.fileListStateful)
+        breadcrumbBackPressCallback.isEnabled = currentWindow.viewModel.canNavigateUpBreadcrumb
+        onViewTypeChanged(currentWindow.viewModel.viewTypeLiveData.valueCompat)
+        onSortOptionsChanged(currentWindow.viewModel.sortOptionsLiveData.valueCompat)
+        onViewSortPathSpecificChanged(currentWindow.viewModel.viewSortPathSpecificLiveData.valueCompat)
+        onPickOptionsChanged(currentWindow.viewModel.pickOptionsLiveData.valueCompat)
+        onSelectedFilesChanged(currentWindow.viewModel.selectedFilesLiveData.valueCompat)
+        onPasteStateChanged(currentWindow.viewModel.pasteStateLiveData.valueCompat)
+        onFileListChanged(currentWindow.viewModel.fileListStateful)
         for ((_, observer) in navigationPathObservers) {
-            observer(window.currentWindow.viewModel.currentPath)
+            observer(currentWindow.viewModel.currentPath)
         }
     }
 
