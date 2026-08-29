@@ -28,6 +28,7 @@ import me.zhanghai.android.files.util.getState
 import me.zhanghai.android.files.util.layoutInflater
 import me.zhanghai.android.files.util.putState
 import me.zhanghai.android.files.util.toBitmapDrawable
+import me.zhanghai.android.files.util.valueCompat
 
 /**
  * @see androidx.preference.PreferenceDialogFragmentCompat

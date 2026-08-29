@@ -33,6 +33,7 @@ import me.zhanghai.android.files.databinding.DialogApkInfoBinding
 import me.zhanghai.android.files.file.asFileSize
 import me.zhanghai.android.files.util.layoutInflater
 import me.zhanghai.android.files.util.showToast
+import me.zhanghai.android.files.util.valueCompat
 import me.zhanghai.android.files.util.startActivitySafe
 
 class ApkInfoDialogFragment : AppCompatDialogFragment() {
