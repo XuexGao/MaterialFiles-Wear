@@ -1372,7 +1372,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         files.map { it.path }.sortedBy { it.toUri() }
 
     private fun onFileNameEllipsizeChanged(fileNameEllipsize: TextUtils.TruncateAt) {
-        currentWindow.adapter!!.nameEllipsize = fileNameEllipsize
+        currentWindow.adapter?.let { it.nameEllipsize = fileNameEllipsize }
     }
 
     override fun clearSelectedFiles() {
