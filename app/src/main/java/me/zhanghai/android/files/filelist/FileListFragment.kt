@@ -856,7 +856,8 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun onSortOptionsChanged(sortOptions: FileSortOptions) {
-        currentWindow.adapter!!.sortOptions = sortOptions
+        val adapter = currentWindow.adapter ?: return
+        adapter.sortOptions = sortOptions
         updateViewSortMenuItems()
     }
 
@@ -954,8 +955,8 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     override fun navigateTo(path: Path) {
         collapseSearchView()
-        val state = currentWindow.layoutManager!!.onSaveInstanceState()
-        currentWindow.viewModel.navigateTo(state!!, path)
+        val state = currentWindow.layoutManager?.onSaveInstanceState() ?: return
+        currentWindow.viewModel.navigateTo(state, path)
     }
 
     override fun copyPath(path: Path) {
@@ -985,7 +986,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         updateSelectAllMenuItem()
         updateOverlayToolbar()
         updateBottomToolbar()
-        currentWindow.adapter!!.pickOptions = pickOptions
+        currentWindow.adapter?.let { it.pickOptions = pickOptions }
     }
 
     private fun updateSelectAllMenuItem() {
@@ -1032,7 +1033,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
 
     private fun onSelectedFilesChanged(files: FileItemSet) {
         updateOverlayToolbar()
-        currentWindow.adapter!!.replaceSelectedFiles(files)
+        currentWindow.adapter?.let { it.replaceSelectedFiles(files) }
     }
 
     private fun updateOverlayToolbar() {
@@ -1211,7 +1212,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun selectAllFiles() {
-        currentWindow.adapter!!.selectAllFiles()
+        currentWindow.adapter?.let { it.selectAllFiles() }
     }
 
     private fun onPasteStateChanged(pasteState: PasteState) {
@@ -1499,10 +1500,11 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         if (!mimeType.isImage) {
             return
         }
+        val adapter = currentWindow.adapter ?: return
         var paths = mutableListOf<Path>()
         // We need the ordered list from our adapter instead of the list from FileListLiveData.
-        for (index in 0..<currentWindow.adapter!!.itemCount) {
-            val file = currentWindow.adapter!!.getItem(index)
+        for (index in 0..<adapter.itemCount) {
+            val file = adapter.getItem(index)
             val filePath = file.path
             if (file.mimeType.isImage || filePath == path) {
                 paths.add(filePath)
