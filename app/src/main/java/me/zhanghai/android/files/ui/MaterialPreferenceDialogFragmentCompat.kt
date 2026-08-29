@@ -94,9 +94,19 @@ abstract class MaterialPreferenceDialogFragmentCompat : AppCompatDialogFragment(
         // Display the dialog fullscreen when the watch setting asks for it; the default window
         // size is too small for dialogs with a lot of content on small screens.
         if (Settings.DIALOG_FULLSCREEN.valueCompat) {
-            dialog?.window?.setLayout(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-            )
+            dialog?.window?.apply {
+                setLayout(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                // The Material dialog background is an inset drawable that keeps margins around
+                // the window even at MATCH_PARENT; replace it with an opaque surface color so
+                // the dialog really covers the whole screen.
+                val typedArray = context.obtainStyledAttributes(
+                    intArrayOf(android.R.attr.colorBackground)
+                )
+                setBackgroundDrawable(typedArray.getDrawable(0))
+                typedArray.recycle()
+            }
         }
     }
 
