@@ -491,9 +491,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             }
         }
         window.viewModel.fileListLiveData.observe(viewLifecycleOwner) {
-            if (window === currentWindow) {
-                onFileListChanged(it)
-            }
+            onFileListChanged(window, it)
         }
     }
 
@@ -522,7 +520,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         viewModel.pickOptionsLiveData.value?.let { onPickOptionsChanged(it) }
         viewModel.selectedFilesLiveData.value?.let { onSelectedFilesChanged(it) }
         viewModel.pasteStateLiveData.value?.let { onPasteStateChanged(it) }
-        viewModel.fileListLiveData.value?.let { onFileListChanged(it) }
+        viewModel.fileListLiveData.value?.let { onFileListChanged(currentWindow, it) }
         viewModel.currentPathLiveData.value?.let { path ->
             for ((_, observer) in navigationPathObservers) {
                 observer(path)
@@ -780,24 +778,33 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         updateViewSortMenuItems()
     }
 
-    private fun onFileListChanged(stateful: Stateful<List<FileItem>>) {
-        if (currentWindow.contentBinding == null || currentWindow.adapter == null) {
+    private fun onFileListChanged(window: Window, stateful: Stateful<List<FileItem>>) {
+        // Content views and the adapter are updated for every window as its list changes, so
+        // that switching to it later does not re-run the list animation; the shared toolbar
+        // subtitle follows the current window only.
+        val contentBinding = window.contentBinding
+        val adapter = window.adapter
+        val isCurrent = window === currentWindow
+        if (contentBinding == null || adapter == null) {
             return
         }
 
         val files = stateful.value
-        val isSearching = currentWindow.viewModel.searchState.isSearching
-        when {
-            stateful is Failure -> binding.toolbar.setSubtitle(R.string.error)
-            stateful is Loading && !isSearching -> binding.toolbar.setSubtitle(R.string.loading)
-            else -> binding.toolbar.subtitle = getSubtitle(files!!)
+        val isSearching = window.viewModel.searchState.isSearching
+        if (isCurrent) {
+            when {
+                stateful is Failure -> binding.toolbar.setSubtitle(R.string.error)
+                stateful is Loading && !isSearching ->
+                    binding.toolbar.setSubtitle(R.string.loading)
+                else -> binding.toolbar.subtitle = getSubtitle(files!!)
+            }
         }
         val hasFiles = !files.isNullOrEmpty()
-        currentWindow.contentBinding?.swipeRefreshLayout?.let {
+        contentBinding.swipeRefreshLayout?.let {
             it.isRefreshing = stateful is Loading && (hasFiles || isSearching)
         }
-        currentWindow.contentBinding?.progress?.fadeToVisibilityUnsafe(stateful is Loading && !(hasFiles || isSearching))
-        currentWindow.contentBinding?.errorText?.fadeToVisibilityUnsafe(stateful is Failure && !hasFiles)
+        contentBinding.progress?.fadeToVisibilityUnsafe(stateful is Loading && !(hasFiles || isSearching))
+        contentBinding.errorText?.fadeToVisibilityUnsafe(stateful is Failure && !hasFiles)
         val throwable = (stateful as? Failure)?.throwable
         if (throwable != null) {
             throwable.printStackTrace()
@@ -805,18 +812,18 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             if (hasFiles) {
                 showToast(error)
             } else {
-                currentWindow.contentBinding?.errorText?.let { it.text = error }
+                contentBinding.errorText?.let { it.text = error }
             }
         }
-        currentWindow.contentBinding?.emptyView?.fadeToVisibilityUnsafe(stateful is Success && !hasFiles)
+        contentBinding.emptyView?.fadeToVisibilityUnsafe(stateful is Success && !hasFiles)
         if (files != null) {
-            updateAdapterFileList()
+            updateAdapterFileList(window)
         } else {
             // This resets animation as well.
-            currentWindow.adapter!!.clear()
+            adapter.clear()
         }
         if (stateful is Success) {
-            currentWindow.viewModel.pendingState?.let { currentWindow.layoutManager?.onRestoreInstanceState(it) }
+            window.viewModel.pendingState?.let { window.layoutManager?.onRestoreInstanceState(it) }
         }
     }
 
@@ -933,17 +940,17 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun onShowHiddenFilesChanged(showHiddenFiles: Boolean) {
-        updateAdapterFileList()
+        updateAdapterFileList(currentWindow)
         updateShowHiddenFilesMenuItem()
     }
 
-    private fun updateAdapterFileList() {
-        val adapter = currentWindow.adapter ?: return
-        var files = currentWindow.viewModel.fileListStateful.value ?: return
+    private fun updateAdapterFileList(window: Window) {
+        val adapter = window.adapter ?: return
+        var files = window.viewModel.fileListStateful.value ?: return
         if (!Settings.FILE_LIST_SHOW_HIDDEN_FILES.valueCompat) {
             files = files.filterNot { it.isHidden }
         }
-        adapter.replaceListAndIsSearching(files, currentWindow.viewModel.searchState.isSearching)
+        adapter.replaceListAndIsSearching(files, window.viewModel.searchState.isSearching)
     }
 
     private fun updateShowHiddenFilesMenuItem() {

@@ -218,12 +218,9 @@ class VideoPlayerActivity : AppActivity() {
                     if (!prepared) {
                         return false
                     }
-                    // No double tap seeking: it would conflict with the zoom gestures.
-                    if (textureView.scaleX > 1f) {
-                        resetVideoZoom()
-                    } else {
-                        togglePlayPause()
-                    }
+                    // Double tapping only resets the zoom; there is no play/pause or seeking
+                    // on double tap because it conflicts with the zoom gestures.
+                    resetVideoZoom()
                     return true
                 }
             }
